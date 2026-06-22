@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <!-- Background -->
+  <rect width="400" height="400" fill="#070b13" rx="40" />
+  
+  <!-- Subtle circular grid / glow in background -->
+  <circle cx="200" cy="200" r="180" fill="none" stroke="rgba(0, 168, 225, 0.05)" stroke-width="2" />
+  <circle cx="200" cy="200" r="130" fill="none" stroke="rgba(0, 168, 225, 0.08)" stroke-width="1.5" />
+  
+  <g transform="translate(35, 105)">
+    <!-- CANAL Text -->
+    <text x="5" y="65" font-family="'Space Grotesk', 'Inter', sans-serif" font-weight="900" font-size="80" fill="#FFFFFF" letter-spacing="-3">CANAL</text>
+    
+    <!-- PLAY Group -->
+    <g transform="translate(0, 95)">
+      <!-- Play Icon Triangle for P -->
+      <polygon points="12,50 12,112 66,81" fill="#00A8E1" />
+      <!-- LAY Text -->
+      <text x="75" y="105" font-family="'Space Grotesk', 'Inter', sans-serif" font-weight="900" font-size="80" fill="#FFFFFF" letter-spacing="-3">PLAY</text>
+    </g>
+  </g>
+  
+  <!-- Channel Number Badge in bottom right corner -->
+  <g transform="translate(280, 280)">
+    <rect width="80" height="80" rx="24" fill="#00A8E1" />
+    <text x="40" y="56" font-family="'Space Grotesk', 'Inter', sans-serif" font-weight="900" font-size="48" fill="#FFFFFF" text-anchor="middle">8</text>
+  </g>
+  
+</svg>

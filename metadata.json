@@ -1,0 +1,6 @@
+{
+  "name": "DENDEN TV",
+  "description": "Plateforme IPTV & Cinéma Premium avec gestion de bibliothèque de films, EPG temps réel et interface haute performance optimisée.",
+  "requestFramePermissions": ["fullscreen"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

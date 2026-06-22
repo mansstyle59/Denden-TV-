@@ -1,0 +1,19 @@
+[
+  {
+    name: 'BeIN Sports 3',
+    stream: 'https://cluone.dad:443/live/99F7CFCD396779DC13E1FEF9BA9F9AE8/9.m3u8'
+  },
+  {
+    name: 'M6',
+    stream: 'https://cluone.dad:443/live/99F7CFCD396779DC13E1FEF9BA9F9AE8/44.m3u8'
+  },
+  { name: 'W9', stream: null },
+  {
+    name: 'France 2',
+    stream: 'https://cluone.dad:443/live/99F7CFCD396779DC13E1FEF9BA9F9AE8/42.m3u8'
+  },
+  {
+    name: 'France 3',
+    stream: 'https://cluone.dad:443/live/99F7CFCD396779DC13E1FEF9BA9F9AE8/43.m3u8'
+  }
+]

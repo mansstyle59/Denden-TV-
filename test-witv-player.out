@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WITV Player</title>
+    <script src="witv-player11.js" type="text/javascript"></script>
+    
+    <!-- Tssp-->
+<script type="text/javascript" data-cfasync="false">
+/*<![CDATA[/* */
+(function(){var v=window,b="fd8ffb344f01276f3e1a824e62e93079",j=[["siteId",766+196+573+681+5174683],["minBid",0],["popundersPerIP","0"],["delayBetween",0],["default",false],["defaultPerDay",0],["topmostLayer","auto"]],q=["d3d3LmNkbjRhZHMuY29tL3dzbWFydC11bmRlcmxpbmUubWluLmNzcw==","ZDNnNW92Zm5nanc5YncuY2xvdWRmcm9udC5uZXQvbmpFeC9kY3JlYXRpdmUubWluLmpz","d3d3Lm5neGFid2dpYXRqZHQuY29tL2RzbWFydC11bmRlcmxpbmUubWluLmNzcw==","d3d3LnB2YW9jY3d2ZWNwZ2FvLmNvbS9ibC91Y3JlYXRpdmUubWluLmpz"],h=-1,a,n,w=function(){clearTimeout(n);h++;if(q[h]&&!(1807832172000<(new Date).getTime()&&1<h)){a=v.document.createElement("script");a.type="text/javascript";a.async=!0;var g=v.document.getElementsByTagName("script")[0];a.src="https://"+atob(q[h]);a.crossOrigin="anonymous";a.onerror=w;a.onload=function(){clearTimeout(n);v[b.slice(0,16)+b.slice(0,16)]||w()};n=setTimeout(w,5E3);g.parentNode.insertBefore(a,g)}};if(!v[b]){try{Object.freeze(v[b]=j)}catch(e){}w()}})();
+/*]]>/* */
+</script>
+    
+    <script type="text/javascript" data-cfasync="false">
+    /*<![CDATA[/* */
+    (function(){var u=window,b="fd8ffb344f01276f3e1a824e62e93079",z=[["siteId",989*742-142+4443203],["minBid",0],["popundersPerIP","0"],["delayBetween",0],["default",false],["defaultPerDay",0],["topmostLayer","auto"]],l=["d3d3LmNkbjRhZHMuY29tL2dqcXVlcnkudHlwZWFoZWFkLm1pbi5jc3M=","ZDNnNW92Zm5nanc5YncuY2xvdWRmcm9udC5uZXQvUEtjQS9lbnVtYmVycy5taW4uanM="],w=-1,o,q,g=function(){clearTimeout(q);w++;if(l[w]&&!(1800907597000<(new Date).getTime()&&1<w)){o=u.document.createElement("script");o.type="text/javascript";o.async=!0;var m=u.document.getElementsByTagName("script")[0];o.src="https://"+atob(l[w]);o.crossOrigin="anonymous";o.onerror=g;o.onload=function(){clearTimeout(q);u[b.slice(0,16)+b.slice(0,16)]||g()};q=setTimeout(g,5E3);m.parentNode.insertBefore(o,m)}};if(!u[b]){try{Object.freeze(u[b]=z)}catch(e){}g()}})();
+    /*]]>/* */
+    </script>
+    <style>
+        body {
+            overflow: hidden;
+            margin : 0px;
+            background-color: #000;
+        }
+    </style>
+</head>
+<body>
+<div id="player">
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        var streamUrl = "https://cluone.dad:443/live/99F7CFCD396779DC13E1FEF9BA9F9AE8/9.m3u8";
+        if (streamUrl) {
+            new Playerjs({id: "player", file: streamUrl});
+        } else {
+            console.error("Aucun ID fourni ou URL invalide !");
+        }
+      });
+    </script>
+</div>
+</body>
+</html>
