@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Play, Maximize2, MonitorPlay, Star, Volume2, VolumeX, History, 
   Search, Calendar, FileUp, Link, Trash2, ArrowRight, Activity, 
@@ -282,6 +282,29 @@ export default function HomePremium({
     .filter(item => item.prog.progressPercent < 30)
     .slice(0, 6);
 
+  const heroProgDetails = heroChannel ? getDynamicProgram(heroChannel) : null;
+  const isMobile = deviceType === 'mobile' || deviceType === 'tablet';
+
+  const spotlightMovie = useMemo(() => {
+    if (!movies || movies.length === 0) return null;
+    // Prefer movies with posters or banner
+    const withVisual = movies.filter(m => m.banner || m.poster);
+    const pool = withVisual.length > 0 ? withVisual : movies;
+    return [...pool].sort((a, b) => {
+      const bScore = (b.ratingImdb || 0);
+      const aScore = (a.ratingImdb || 0);
+      return bScore - aScore;
+    })[0];
+  }, [movies]);
+
+  const [networkPing, setNetworkPing] = useState(24);
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setNetworkPing(Math.floor(Math.random() * 12) + 15);
+    }, 8000);
+    return () => clearInterval(intervalId);
+  }, []);
+
   if (channels.length === 0) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center p-4">
@@ -323,29 +346,6 @@ export default function HomePremium({
       </div>
     );
   }
-
-  const heroProgDetails = heroChannel ? getDynamicProgram(heroChannel) : null;
-  const isMobile = deviceType === 'mobile' || deviceType === 'tablet';
-
-  const spotlightMovie = useMemo(() => {
-    if (!movies || movies.length === 0) return null;
-    // Prefer movies with posters or banner
-    const withVisual = movies.filter(m => m.banner || m.poster);
-    const pool = withVisual.length > 0 ? withVisual : movies;
-    return [...pool].sort((a, b) => {
-      const bScore = (b.ratingImdb || 0);
-      const aScore = (a.ratingImdb || 0);
-      return bScore - aScore;
-    })[0];
-  }, [movies]);
-
-  const [networkPing, setNetworkPing] = useState(24);
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setNetworkPing(Math.floor(Math.random() * 12) + 15);
-    }, 8000);
-    return () => clearInterval(intervalId);
-  }, []);
 
   const stats = {
     active: channels.filter(c => c.status !== 'offline').length,

@@ -1,0 +1,52 @@
+{
+  "id": "com.tvmio.iptv",
+  "version": "2.1.0",
+  "name": "TVMio",
+  "description": "The best TV addon for Stremio featuring multiple countries and categories.",
+  "logo": "https://tvmio.ooguy.com/logo.png",
+  "resources": [
+    "catalog",
+    "meta",
+    "stream"
+  ],
+  "types": [
+    "tv"
+  ],
+  "catalogs": [
+    {
+      "type": "tv",
+      "id": "tvmio-fr",
+      "name": "TVMio | FR 🇫🇷",
+      "extra": [
+        {
+          "name": "search",
+          "isRequired": false
+        },
+        {
+          "name": "genre",
+          "isRequired": false,
+          "options": [
+            "General 📺",
+            "Sports ⚽",
+            "Documentaires 🌍",
+            "Films 🎬",
+            "Informations 📰",
+            "Music 🎵",
+            "Enfants 👶"
+          ]
+        },
+        {
+          "name": "skip",
+          "isRequired": false
+        }
+      ]
+    }
+  ],
+  "idPrefixes": [
+    "tvmio-"
+  ],
+  "behaviorHints": {
+    "configurable": true,
+    "configurationRequired": false
+  }
+}

@@ -12,6 +12,7 @@ import { Channel, Category, EPGSource } from '../types';
 import { cn } from '../lib/utils';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useDeviceType } from '../hooks/useDeviceType';
 
 interface AdminPanelProps {
   channels: Channel[];
@@ -24,12 +25,14 @@ interface AdminPanelProps {
 type AdminTab = 'overview' | 'channels' | 'categories' | 'streams' | 'epg' | 'security';
 
 export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, onDeleteChannel, currentUserEmail }: AdminPanelProps) {
+  const deviceType = useDeviceType();
+  const isMobile = deviceType === 'mobile' || deviceType === 'tablet';
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [scanType, setScanType] = useState<'m3u' | 'xtream' | 'url' | 'fstv' | 'witv' | 'local'>('m3u');
+  const [scanType, setScanType] = useState<'m3u' | 'xtream' | 'url' | 'fstv' | 'witv' | 'tvmio' | 'local'>('m3u');
   const [scanUrl, setScanUrl] = useState('');
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -267,6 +270,18 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
         fetchStats();
       } catch (err) {
         alert('Erreur lors du scrap.');
+      } finally {
+        setIsProcessing(false);
+      }
+    } else if (scanType === 'tvmio') {
+      setIsProcessing(true);
+      try {
+        const res = await axios.post('/api/channels/import-tvmio');
+        alert(`${res.data.count} nouvelles chaînes TVMio importées (${res.data.totalInCatalog} au total).`);
+        setIsScanning(false);
+        fetchStats();
+      } catch (err) {
+        alert('Erreur lors de l’importation TVMio.');
       } finally {
         setIsProcessing(false);
       }
@@ -527,31 +542,31 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
   }
 
   return (
-    <div className="space-y-6 lg:space-y-8 animate-fade-in pb-20 lg:pb-0">
+    <div className="space-y-6 lg:space-y-8 animate-fade-in pb-32 lg:pb-0">
       {/* Header Admin */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-        <div>
+        <div className="flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-red-600 rounded-xl shadow-lg shadow-red-600/20">
-              <ShieldCheck className="text-white" size={24} />
+            <div className="p-2 md:p-3 bg-red-600 rounded-xl shadow-xl shadow-red-600/20">
+              <ShieldCheck className="text-white" size={isMobile ? 20 : 28} />
             </div>
             <div>
-              <h1 className="text-2xl lg:text-3xl font-black text-white tracking-tight uppercase">Centre de Contrôle Avancé</h1>
-              <p className="text-xs text-white/40 font-mono tracking-widest mt-0.5">ADMINISTRATION HUB • ID: {currentUserEmail?.split('@')[0] || 'ROOT'}</p>
+              <h1 className="text-xl md:text-2xl lg:text-3xl font-black text-white tracking-tighter uppercase leading-none">Centre de Contrôle</h1>
+              <p className="text-[9px] md:text-xs text-white/40 font-mono tracking-[0.2em] mt-1 uppercase">Admin Hub • ID: {currentUserEmail?.split('@')[0] || 'ROOT'}</p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/5">
+        <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-2xl border border-white/5 overflow-x-auto scrollbar-hide max-w-full">
           {(['overview', 'channels', 'categories', 'streams', 'epg'] as AdminTab[]).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "px-4 py-2 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider transition-all",
+                "px-3 md:px-5 py-2.5 rounded-xl text-[9px] md:text-[10px] lg:text-xs font-black uppercase tracking-widest transition-all shrink-0",
                 activeTab === tab 
-                  ? "bg-white text-black shadow-lg" 
-                  : "text-white/50 hover:text-white hover:bg-white/5"
+                  ? "bg-white text-black shadow-xl" 
+                  : "text-white/40 hover:text-white hover:bg-white/5"
               )}
             >
               {tab === 'overview' && 'Stats'}
@@ -574,29 +589,29 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
             className="space-y-6"
           >
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 lg:gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-6">
               {dashboardCards.map((card, i) => (
-                <div key={i} className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl relative overflow-hidden group">
+                <div key={i} className="bg-white/[0.03] border border-white/5 p-5 md:p-6 rounded-[2rem] backdrop-blur-xl relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                    <card.icon size={80} />
+                    <card.icon size={isMobile ? 60 : 80} />
                   </div>
-                  <card.icon className={cn(card.color, "mb-4")} size={28} />
-                  <div className="text-3xl lg:text-4xl font-black text-white mb-1">{card.value}</div>
-                  <div className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{card.label}</div>
+                  <card.icon className={cn(card.color, "mb-3 md:mb-4")} size={isMobile ? 22 : 28} />
+                  <div className="text-2xl md:text-3xl lg:text-4xl font-black text-white mb-0.5 tracking-tighter">{card.value}</div>
+                  <div className="text-[8px] md:text-[10px] text-white/40 font-black uppercase tracking-widest">{card.label}</div>
                 </div>
               ))}
             </div>
 
             {/* Quick Action Bento */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 bg-gradient-to-br from-red-600/20 to-transparent border border-red-600/20 p-8 rounded-[2.5rem] relative overflow-hidden">
-                <div className="relative z-10 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+              <div className="lg:col-span-2 bg-gradient-to-br from-red-600/20 to-transparent border border-red-600/20 p-6 md:p-10 rounded-[2.5rem] relative overflow-hidden">
+                <div className="relative z-10 space-y-6 md:space-y-8">
                   <div>
-                    <h3 className="text-2xl font-black text-white mb-2">Actions Système Rapides</h3>
-                    <p className="text-white/60 text-sm max-w-lg">Exécutez des opérations de maintenance globales sur l'ensemble de votre base de données Denden TV.</p>
+                    <h3 className="text-xl md:text-3xl font-black text-white mb-2 tracking-tight">Actions Système</h3>
+                    <p className="text-white/50 text-xs md:text-sm max-w-lg leading-relaxed font-medium">Exécutez des opérations de maintenance globales sur l'ensemble de votre base de données Denden TV.</p>
                   </div>
                   
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <button onClick={() => axios.post('/api/epg/sync')} className="flex flex-col items-center justify-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-3xl border border-white/10 transition-all text-white group">
                       <RefreshCw className="group-hover:rotate-180 transition-transform duration-500" size={24} />
                       <span className="text-[9px] font-black uppercase tracking-tighter text-center">Sync EPG</span>
@@ -740,7 +755,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
 
             {/* Manual Form Overlay Modal */}
             {isAdding && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+              <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
                 <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -748,18 +763,18 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                   onClick={() => setIsAdding(false)}
                 />
                 <motion.div 
-                  initial={{ scale: 0.9, y: 20 }}
-                  animate={{ scale: 1, y: 0 }}
-                  className="w-full max-w-4xl bg-[#111111] border border-white/10 rounded-[2.5rem] overflow-hidden relative z-10 shadow-2xl"
+                  initial={isMobile ? { y: "100%" } : { scale: 0.9, y: 20 }}
+                  animate={{ y: 0, scale: 1 }}
+                  className="w-full sm:max-w-4xl max-h-[95vh] sm:max-h-none h-auto bg-[#111111] border-t sm:border border-white/10 rounded-t-[2rem] sm:rounded-[2.5rem] overflow-hidden relative z-10 shadow-2xl flex flex-col"
                 >
-                  <div className="p-8 border-b border-white/10 flex justify-between items-center">
-                    <h2 className="text-xl font-black text-white uppercase tracking-tight">{editingId ? 'Modifier la Chaîne' : 'Nouvelle Chaîne'}</h2>
-                    <button onClick={() => setIsAdding(false)} className="text-white/40 hover:text-white transition-colors"><X size={24} /></button>
+                  <div className="p-5 sm:p-8 border-b border-white/10 flex justify-between items-center shrink-0">
+                    <h2 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight">{editingId ? 'Modifier' : 'Nouveau Canal'}</h2>
+                    <button onClick={() => setIsAdding(false)} className="text-white/40 hover:text-white transition-colors p-2 -mr-2"><X size={20} /></button>
                   </div>
                   
-                  <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="space-y-6">
+                  <div className="p-5 sm:p-8 overflow-y-auto custom-scrollbar flex-1 pb-10 sm:pb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8">
+                      <div className="space-y-4 sm:space-y-6">
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block ml-1">Identité & Nom</label>
                           <input 
@@ -767,7 +782,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                             placeholder="Nom du canal" 
                             value={formData.name || ''} 
                             onChange={e => setFormData({...formData, name: e.target.value})}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-red-600"
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 sm:py-4 text-sm text-white focus:outline-none focus:border-red-600"
                           />
                         </div>
                         <div className="space-y-2">
@@ -777,7 +792,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                             placeholder="https://..." 
                             value={formData.url || ''} 
                             onChange={e => setFormData({...formData, url: e.target.value})}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-red-600 font-mono"
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 sm:py-4 text-sm text-white focus:outline-none focus:border-red-600 font-mono"
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -786,7 +801,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                             <select 
                               value={formData.category}
                               onChange={e => setFormData({...formData, category: e.target.value})}
-                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-red-600 appearance-none"
+                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 sm:py-4 text-sm text-white focus:outline-none focus:border-red-600 appearance-none"
                             >
                               {categories.map((cat, i) => <option key={`cat-opt-${cat.id || ''}-${i}`} value={cat.name}>{cat.name}</option>)}
                             </select>
@@ -797,13 +812,13 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                               type="number" 
                               value={formData.channelNumber || ''} 
                               onChange={e => setFormData({...formData, channelNumber: parseInt(e.target.value)})}
-                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-red-600"
+                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 sm:py-4 text-sm text-white focus:outline-none focus:border-red-600"
                             />
                           </div>
                         </div>
                       </div>
 
-                      <div className="space-y-6">
+                      <div className="space-y-4 sm:space-y-6">
                         <div className="space-y-2">
                           <div className="flex justify-between items-center px-1">
                             <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Logo (URL ou Upload)</label>
@@ -815,7 +830,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                             </button>
                           </div>
                           <div className="flex gap-4">
-                            <div className="w-20 h-20 bg-black border border-white/10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0">
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-black border border-white/10 rounded-2xl flex items-center justify-center overflow-hidden shrink-0">
                               {formData.logo ? <img src={formData.logo} alt="" className="w-full h-full object-contain p-2" /> : <ImageIcon className="text-white/20" size={24} />}
                             </div>
                             <input 
@@ -823,7 +838,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                               placeholder="URL du logo" 
                               value={formData.logo || ''} 
                               onChange={e => setFormData({...formData, logo: e.target.value})}
-                              className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-red-600"
+                              className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-3 sm:py-4 text-sm text-white focus:outline-none focus:border-red-600"
                             />
                           </div>
                         </div>
@@ -836,7 +851,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                               placeholder="ex: France" 
                               value={formData.country || ''} 
                               onChange={e => setFormData({...formData, country: e.target.value})}
-                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-red-600"
+                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 sm:py-4 text-sm text-white focus:outline-none focus:border-red-600"
                             />
                           </div>
                           <div className="space-y-2">
@@ -846,62 +861,62 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                               placeholder="ex: Français" 
                               value={formData.language || ''} 
                               onChange={e => setFormData({...formData, language: e.target.value})}
-                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-red-600"
+                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 sm:py-4 text-sm text-white focus:outline-none focus:border-red-600"
                             />
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block ml-1">Flux de secours (M3U8/TS, un par ligne)</label>
+                          <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block ml-1">Flux de secours (Ligne par ligne)</label>
                           <textarea 
                             rows={2}
                             placeholder="https://backup1.com/stream.m3u8&#10;https://backup2.com/stream.m3u8" 
                             value={formData.backupUrls?.join('\n') || ''} 
                             onChange={e => setFormData({...formData, backupUrls: e.target.value.split('\n').filter(l => l.trim() !== '')})}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs text-white focus:outline-none focus:border-red-600 font-mono resize-none"
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 sm:py-4 text-xs text-white focus:outline-none focus:border-red-600 font-mono resize-none"
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block ml-1">Tags (séparés par des virgules)</label>
+                          <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block ml-1">Tags (Séparez par virgules)</label>
                           <input 
                             type="text" 
                             placeholder="4K, HEVC, Sport, FR" 
                             value={formData.tags?.join(', ') || ''} 
                             onChange={e => setFormData({...formData, tags: e.target.value.split(',').map(t => t.trim()).filter(t => t !== '')})}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-red-600"
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 sm:py-4 text-sm text-white focus:outline-none focus:border-red-600"
                           />
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="p-8 bg-white/5 border-t border-white/10 flex justify-between items-center">
-                    <div className="flex items-center gap-3">
+                  <div className="p-5 sm:p-8 bg-white/5 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0">
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
                       <button 
                         onClick={() => setFormData({...formData, isEnabled: !formData.isEnabled})}
                         className={cn(
-                          "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border",
+                          "flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border w-full sm:w-auto",
                           formData.isEnabled ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"
                         )}
                       >
-                        {formData.isEnabled ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                        {formData.isEnabled ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
                         {formData.isEnabled ? 'Activée' : 'Désactivée'}
                       </button>
                     </div>
-                    <div className="flex gap-4">
+                    <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
                       <button 
                         onClick={() => setIsAdding(false)}
-                        className="px-8 py-4 text-white/50 hover:text-white font-black text-xs uppercase tracking-widest"
+                        className="flex-1 sm:flex-none px-6 py-4 text-white/50 hover:text-white font-black text-[10px] uppercase tracking-widest order-2 sm:order-1"
                       >
                         Annuler
                       </button>
                       <button 
                         onClick={handleSaveChannel}
                         disabled={isProcessing}
-                        className="px-10 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-red-600/20 disabled:opacity-50"
+                        className="flex-1 sm:flex-none px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-red-600/20 disabled:opacity-50 min-w-[120px] order-1 sm:order-2"
                       >
-                        {isProcessing ? <RefreshCw className="animate-spin" size={16} /> : (editingId ? 'Mettre à jour' : 'Enregistrer')}
+                        {isProcessing ? <RefreshCw className="animate-spin" size={14} /> : (editingId ? 'Maj' : 'Créer')}
                       </button>
                     </div>
                   </div>
@@ -911,7 +926,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
 
             {/* Scan Modal */}
             {isScanning && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+              <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
                 <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -925,26 +940,28 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                   }}
                 />
                 <motion.div 
-                  initial={{ scale: 0.9, y: 20 }}
-                  animate={{ scale: 1, y: 0 }}
+                  initial={isMobile ? { y: "100%" } : { scale: 0.9, y: 20 }}
+                  animate={{ y: 0, scale: 1 }}
                   className={cn(
-                    "bg-[#111111] border border-white/10 rounded-[2.5rem] overflow-hidden relative z-10 shadow-2xl transition-all duration-300 flex flex-col w-full",
-                    parsedPreviewChannels.length > 0 ? "max-w-5xl h-[85vh]" : "max-w-2xl"
+                    "bg-[#111111] border-t sm:border border-white/10 rounded-t-[2rem] sm:rounded-[2.5rem] overflow-hidden relative z-10 shadow-2xl transition-all duration-300 flex flex-col w-full",
+                    parsedPreviewChannels.length > 0 ? "max-w-5xl h-[95vh] sm:h-[85vh]" : "max-w-2xl max-h-[90vh] sm:max-h-none"
                   )}
                 >
                   {/* Header */}
-                  <div className="p-8 border-b border-white/10 flex justify-between items-center shrink-0">
+                  <div className="p-5 md:p-8 border-b border-white/10 flex justify-between items-center shrink-0">
                     <div>
-                      <h2 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3">
-                        <Radar className="text-blue-500" /> 
-                        {parsedPreviewChannels.length > 0 
-                          ? `Importation (${parsedPreviewChannels.length} chaînes trouvées)` 
-                          : 'Centre d’Importation de Playlists'}
+                      <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-tight flex items-center gap-3">
+                        <Radar className="text-blue-500 w-5 h-5 md:w-6 md:h-6" /> 
+                        <span className="truncate max-w-[200px] sm:max-w-none">
+                          {parsedPreviewChannels.length > 0 
+                            ? `Importation (${parsedPreviewChannels.length} chaînes)` 
+                            : 'Centre d’Importation'}
+                        </span>
                       </h2>
-                      <p className="text-xs text-white/40 font-mono tracking-wider mt-1">
+                      <p className="text-[10px] md:text-xs text-white/40 font-mono tracking-wider mt-1">
                         {parsedPreviewChannels.length > 0 
-                          ? 'SÉLECTIONNEZ ET CATÉGORISEZ LES CANAUX AVANT L’IMPORTATION' 
-                          : 'AJOUTEZ DES PLAYLISTS DEPUIS UNE URL DISTANTE OU UN FICHIER LOCAL'}
+                          ? 'SÉLECTIONNEZ ET CATÉGORISEZ' 
+                          : 'URL DISTANTE OU FICHIER LOCAL'}
                       </p>
                     </div>
                     <button 
@@ -955,15 +972,15 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                         setScanUrl('');
                         setGlobalCategoryOverride('');
                       }} 
-                      className="text-white/40 hover:text-white transition-colors"
+                      className="p-2 -mr-2 text-white/40 hover:text-white transition-colors"
                     >
-                      <X size={24} />
+                      <X size={20} />
                     </button>
                   </div>
                   
                   {/* Status Overlay */}
                   {importStatusMessage && (
-                    <div className="bg-blue-600 text-white px-8 py-3 text-xs font-bold uppercase tracking-widest flex items-center gap-3 shrink-0 animate-pulse">
+                    <div className="bg-blue-600 text-white px-5 md:px-8 py-3 text-[10px] md:text-xs font-bold uppercase tracking-widest flex items-center gap-3 shrink-0 animate-pulse">
                       <RefreshCw className="animate-spin" size={16} />
                       {importStatusMessage}
                     </div>
@@ -972,20 +989,20 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                   {parsedPreviewChannels.length === 0 ? (
                     /* STEP 1: CHOOSE AND PARSE SOURCE */
                     <>
-                      <div className="p-8 overflow-y-auto custom-scrollbar">
-                        <div className="flex flex-wrap gap-2 mb-8 bg-white/5 p-1.5 rounded-2xl border border-white/5 mx-auto w-fit">
-                          {(['m3u', 'xtream', 'url', 'fstv', 'witv', 'local'] as const).map(t => (
+                      <div className="p-5 md:p-8 overflow-y-auto custom-scrollbar">
+                        <div className="flex flex-wrap gap-1.5 mb-6 md:mb-8 bg-white/5 p-1.5 rounded-2xl border border-white/5 mx-auto w-fit max-w-full overflow-x-auto scrollbar-hide">
+                          {(['m3u', 'xtream', 'url', 'fstv', 'witv', 'tvmio', 'local'] as const).map(t => (
                             <button
                               key={t}
                               onClick={() => setScanType(t)}
                               className={cn(
-                                "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
+                                "px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-wider transition-all shrink-0",
                                 scanType === t 
                                   ? "bg-blue-600 text-white shadow-lg" 
                                   : "text-white/50 hover:text-white hover:bg-white/5"
                               )}
                             >
-                              {t === 'm3u' ? 'M3U URL' : t === 'xtream' ? 'Xtream' : t === 'url' ? 'URL Simple' : t === 'fstv' ? 'FSTV Scraper' : t === 'witv' ? 'wiTV Scraper' : 'Fichier Local'}
+                              {t === 'm3u' ? 'M3U' : t === 'xtream' ? 'Xtream' : t === 'url' ? 'Simple' : t === 'fstv' ? 'FSTV' : t === 'witv' ? 'wiTV' : t === 'tvmio' ? 'TVMio' : 'Local'}
                             </button>
                           ))}
                         </div>
@@ -1061,6 +1078,27 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                             </div>
                           )}
 
+                          {scanType === 'tvmio' && (
+                            <div className="space-y-4 animate-fade-in relative overflow-hidden p-6 rounded-3xl bg-emerald-600/5 border border-emerald-500/20">
+                              <div className="relative z-10 space-y-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+                                    <Tv className="text-white" size={20} />
+                                  </div>
+                                  <div>
+                                    <h3 className="text-sm font-black text-white uppercase tracking-tight">Addon TVMio France</h3>
+                                    <p className="text-[10px] text-white/40 font-mono tracking-widest">STREMIO INTEGRATION • FR VERSION</p>
+                                  </div>
+                                </div>
+                                <p className="text-[11px] text-white/60 leading-relaxed font-bold">
+                                  Importez instantanément des centaines de chaînes françaises gratuites depuis le manifest TVMio. 
+                                  Les flux sont automatiquement routés via notre proxy sécurisé pour une compatibilité maximale.
+                                </p>
+                              </div>
+                              <Sparkles className="absolute -bottom-10 -right-10 text-emerald-500/[0.05]" size={150} />
+                            </div>
+                          )}
+
                           {scanType === 'local' && (
                             <div className="space-y-4 animate-fade-in">
                               <label 
@@ -1101,25 +1139,25 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                         </div>
                       </div>
 
-                      <div className="p-6 bg-white/5 border-t border-white/10 flex justify-end gap-3 shrink-0">
+                      <div className="p-4 md:p-6 bg-white/5 border-t border-white/10 flex flex-col sm:flex-row justify-end gap-3 shrink-0">
                         <button 
                           onClick={() => {
                             setIsScanning(false);
                             setLocalFile(null);
                             setScanUrl('');
                           }}
-                          className="px-6 py-3 text-white/50 hover:text-white font-black text-xs uppercase tracking-widest"
+                          className="w-full sm:w-auto px-6 py-3.5 text-white/50 hover:text-white font-black text-[10px] md:text-xs uppercase tracking-widest order-2 sm:order-1"
                           disabled={isProcessing}
                         >
                           Annuler
                         </button>
                         <button 
                           onClick={handleScan}
-                          disabled={isProcessing || (scanType !== 'local' && !scanUrl) || (scanType === 'local' && !localFile)}
-                          className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center gap-2"
+                          disabled={isProcessing || (scanType !== 'local' && scanType !== 'tvmio' && !scanUrl) || (scanType === 'local' && !localFile)}
+                          className="w-full sm:w-auto px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center gap-2 order-1 sm:order-2"
                         >
-                          {isProcessing ? <RefreshCw className="animate-spin" size={16} /> : <Radar size={16} />}
-                          Analyser
+                          {isProcessing ? <RefreshCw className="animate-spin" size={14} /> : (scanType === 'tvmio' ? <Download size={14} /> : <Radar size={14} />)}
+                          {scanType === 'tvmio' ? 'Lancer' : 'Analyser'}
                         </button>
                       </div>
                     </>
@@ -1127,13 +1165,13 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                     /* STEP 2: SHOW CHANNELS PREVIEW TABLE AND MANAGE SELECTIVE IMPORT */
                     <>
                       {/* Control Panel Above Table */}
-                      <div className="p-6 bg-[#161616] border-b border-white/10 grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 shrink-0">
+                      <div className="p-4 sm:p-6 bg-[#161616] border-b border-white/10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 shrink-0">
                         {/* Search */}
                         <div className="relative">
                           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={16} />
                           <input 
                             type="text" 
-                            placeholder="Rechercher dans la playlist..." 
+                            placeholder="Rechercher..." 
                             value={previewFilter}
                             onChange={e => {
                               setPreviewFilter(e.target.value);
@@ -1153,7 +1191,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                             }}
                             className="w-full bg-black/40 border border-white/10 rounded-2xl p-3 text-xs text-white focus:outline-none focus:border-blue-600 font-medium"
                           >
-                            <option value="ALL">Toutes les catégories détectées ({uniqueM3uCategories(parsedPreviewChannels).length - 1})</option>
+                            <option value="ALL">Catégories ({uniqueM3uCategories(parsedPreviewChannels).length - 1})</option>
                             {uniqueM3uCategories(parsedPreviewChannels).filter(c => c !== 'ALL').map(cat => (
                               <option key={cat} value={cat}>{cat}</option>
                             ))}
@@ -1161,10 +1199,10 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                         </div>
 
                         {/* Global Category Override */}
-                        <div>
+                        <div className="hidden md:block">
                           <input 
                             type="text" 
-                            placeholder="Forcer une catégorie (ex: Sport)..." 
+                            placeholder="Forcer catégorie..." 
                             value={globalCategoryOverride}
                             onChange={e => setGlobalCategoryOverride(e.target.value)}
                             className="w-full bg-black/40 border border-white/10 rounded-2xl py-3 px-4 text-xs text-white focus:outline-none focus:border-blue-600 transition-all font-medium"
@@ -1172,124 +1210,168 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                         </div>
                       </div>
 
-                      {/* Channels Table list */}
-                      <div className="flex-1 overflow-y-auto custom-scrollbar">
-                        <table className="w-full text-left text-xs border-collapse">
-                          <thead className="bg-[#181818] text-white/40 font-black uppercase tracking-widest border-b border-white/10 sticky top-0 z-20">
-                            <tr>
-                              <th className="px-6 py-4 w-12 text-center">
-                                <input 
-                                  type="checkbox"
-                                  checked={
-                                    getFilteredPreview(parsedPreviewChannels, previewFilter, selectedPreviewCategory).length > 0 &&
-                                    getFilteredPreview(parsedPreviewChannels, previewFilter, selectedPreviewCategory).every(ch => channelsToImport.includes(ch.url))
-                                  }
-                                  onChange={(e) => {
-                                    const visible = getFilteredPreview(parsedPreviewChannels, previewFilter, selectedPreviewCategory).map(ch => ch.url);
-                                    if (e.target.checked) {
-                                      setChannelsToImport(prev => [...new Set([...prev, ...visible])]);
-                                    } else {
+                      {/* Channels list - Responsive Card or Table */}
+                      <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#0f0f0f]">
+                        {!isMobile ? (
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead className="bg-[#181818] text-white/40 font-black uppercase tracking-widest border-b border-white/10 sticky top-0 z-20">
+                              <tr>
+                                <th className="px-6 py-4 w-12 text-center text-red-500 font-bold text-[14px]">
+                                   <Tv size={14} />
+                                </th>
+                                <th className="px-6 py-4 w-16 text-center">Logo</th>
+                                <th className="px-6 py-4">Nom de la Chaîne</th>
+                                <th className="px-6 py-4 w-48 font-mono">Groupe Original</th>
+                                <th className="px-6 py-4">URL</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                              {getPaginatedPreview(
+                                getFilteredPreview(parsedPreviewChannels, previewFilter, selectedPreviewCategory),
+                                currentPage
+                              ).map((ch, idx) => {
+                                const isChecked = channelsToImport.includes(ch.url);
+                                return (
+                                  <tr 
+                                    key={idx} 
+                                    className={cn(
+                                      "hover:bg-white/[0.02] cursor-pointer transition-colors",
+                                      isChecked ? "bg-red-600/[0.03]" : ""
+                                    )}
+                                    onClick={() => {
+                                      if (isChecked) {
+                                        setChannelsToImport(prev => prev.filter(url => url !== ch.url));
+                                      } else {
+                                        setChannelsToImport(prev => [...prev, ch.url]);
+                                      }
+                                    }}
+                                  >
+                                    <td className="px-6 py-4 text-center" onClick={e => e.stopPropagation()}>
+                                      <input 
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={() => {
+                                          if (isChecked) {
+                                            setChannelsToImport(prev => prev.filter(url => url !== ch.url));
+                                          } else {
+                                            setChannelsToImport(prev => [...prev, ch.url]);
+                                          }
+                                        }}
+                                        className="w-4 h-4 rounded bg-white/5 border-white/20 accent-red-650"
+                                      />
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                      <img 
+                                        src={ch.logo} 
+                                        alt="" 
+                                        referrerPolicy="no-referrer"
+                                        onError={e => {
+                                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1598257006458-087169a1f08d?auto=format&fit=crop&w=120&h=120';
+                                        }}
+                                        className="w-10 h-10 object-contain rounded-xl bg-white/5 border border-white/10 mx-auto"
+                                      />
+                                    </td>
+                                    <td className="px-6 py-4 font-black text-white text-[13px]">
+                                      {ch.name}
+                                    </td>
+                                    <td className="px-6 py-4 text-white/40 font-bold uppercase tracking-tighter text-[9.5px]">
+                                      <span className="bg-white/5 px-2 py-0.5 rounded-md border border-white/5">{ch.category}</span>
+                                    </td>
+                                    <td className="px-6 py-4 text-white/20 font-mono text-[9px] truncate max-w-xs uppercase">
+                                      {ch.url}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        ) : (
+                          <div className="p-4 space-y-4">
+                             <div className="flex items-center justify-between px-2 mb-2">
+                               <button 
+                                 onClick={() => {
+                                   const visible = getFilteredPreview(parsedPreviewChannels, previewFilter, selectedPreviewCategory).map(ch => ch.url);
+                                   if (visible.every(url => channelsToImport.includes(url))) {
                                       setChannelsToImport(prev => prev.filter(url => !visible.includes(url)));
-                                    }
-                                  }}
-                                  className="w-4 h-4 rounded-sm bg-white/5 border-white/20 accent-blue-600"
-                                />
-                              </th>
-                              <th className="px-6 py-4 w-16 text-center">Logo</th>
-                              <th className="px-6 py-4">Nom de la Chaîne</th>
-                              <th className="px-6 py-4 w-48 font-mono">Groupe M3U Original</th>
-                              <th className="px-6 py-4">URL du flux</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-white/5">
-                            {getPaginatedPreview(
-                              getFilteredPreview(parsedPreviewChannels, previewFilter, selectedPreviewCategory),
-                              currentPage
-                            ).map((ch, idx) => {
-                              const isChecked = channelsToImport.includes(ch.url);
-                              return (
-                                <tr 
-                                  key={idx} 
-                                  className={cn(
-                                    "hover:bg-white/[0.02] cursor-pointer transition-colors",
-                                    isChecked ? "bg-blue-600/[0.02]" : ""
-                                  )}
-                                  onClick={() => {
-                                    if (isChecked) {
-                                      setChannelsToImport(prev => prev.filter(url => url !== ch.url));
-                                    } else {
-                                      setChannelsToImport(prev => [...prev, ch.url]);
-                                    }
-                                  }}
-                                >
-                                  <td className="px-6 py-4 text-center" onClick={e => e.stopPropagation()}>
-                                    <input 
-                                      type="checkbox"
-                                      checked={isChecked}
-                                      onChange={() => {
-                                        if (isChecked) {
-                                          setChannelsToImport(prev => prev.filter(url => url !== ch.url));
-                                        } else {
-                                          setChannelsToImport(prev => [...prev, ch.url]);
-                                        }
-                                      }}
-                                      className="w-4 h-4 rounded bg-white/5 border-white/20 accent-blue-600/80"
-                                    />
-                                  </td>
-                                  <td className="px-6 py-4 text-center">
-                                    <img 
-                                      src={ch.logo} 
-                                      alt="" 
-                                      referrerPolicy="no-referrer"
-                                      onError={e => {
-                                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1598257006458-087169a1f08d?auto=format&fit=crop&w=120&h=120';
-                                      }}
-                                      className="w-10 h-10 object-contain rounded-xl bg-white/5 border border-white/10 mx-auto"
-                                    />
-                                  </td>
-                                  <td className="px-6 py-4 font-bold text-white text-sm">
-                                    {ch.name}
-                                  </td>
-                                  <td className="px-6 py-4 text-white/60 font-mono text-xs">
-                                    <span className="bg-white/5 border border-white/10 px-2 py-1 rounded-lg">
-                                      {ch.category}
-                                    </span>
-                                  </td>
-                                  <td className="px-6 py-4 text-white/40 font-mono text-[11px] truncate max-w-xs">
-                                    {ch.url}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                                   } else {
+                                      setChannelsToImport(prev => [...new Set([...prev, ...visible])]);
+                                   }
+                                 }}
+                                 className="text-[10px] font-black uppercase text-red-500 tracking-widest bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20 active:scale-95 transition-all"
+                               >
+                                 Tout Sélectionner ({getFilteredPreview(parsedPreviewChannels, previewFilter, selectedPreviewCategory).length})
+                               </button>
+                             </div>
+                             {getPaginatedPreview(
+                                getFilteredPreview(parsedPreviewChannels, previewFilter, selectedPreviewCategory),
+                                currentPage
+                              ).map((ch, idx) => {
+                                const isChecked = channelsToImport.includes(ch.url);
+                                return (
+                                  <div 
+                                    key={idx}
+                                    onClick={() => {
+                                      if (isChecked) {
+                                        setChannelsToImport(prev => prev.filter(url => url !== ch.url));
+                                      } else {
+                                        setChannelsToImport(prev => [...prev, ch.url]);
+                                      }
+                                    }}
+                                    className={cn(
+                                      "p-4 rounded-[20px] active:scale-[0.98] transition-all flex items-center gap-4 relative",
+                                      isChecked ? "bg-red-650/10 border border-red-650/40 ring-2 ring-red-600/5 shadow-xl shadow-red-600/10" : "bg-white/[0.03] border border-white/5"
+                                    )}
+                                  >
+                                    <div className="w-12 h-12 bg-black/50 border border-white/10 rounded-xl p-1.5 shrink-0 flex items-center justify-center">
+                                      <img 
+                                        src={ch.logo} 
+                                        alt="" 
+                                        referrerPolicy="no-referrer"
+                                        className="w-full h-full object-contain"
+                                      />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="font-black text-white text-sm truncate uppercase tracking-tight">{ch.name}</h4>
+                                      <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest mt-0.5 truncate">{ch.category}</p>
+                                    </div>
+                                    <div className={cn(
+                                       "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0",
+                                       isChecked ? "bg-red-600 border-red-400 scale-110 shadow-lg" : "bg-white/5 border-white/10"
+                                    )}>
+                                      {isChecked && <Check size={14} className="text-white" strokeWidth={4} />}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        )}
                       </div>
 
                       {/* Pagination Controls & Actions Bottom */}
-                      <div className="p-6 bg-[#161616] border-t border-white/10 flex flex-col sm:flex-row gap-4 items-center justify-between shrink-0">
+                      <div className="p-4 sm:p-6 bg-[#161616] border-t border-white/10 flex flex-col sm:flex-row gap-4 items-center justify-between shrink-0">
                         {/* Page controls */}
                         <div className="flex items-center gap-3">
                           <button 
                             disabled={currentPage === 1}
                             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                            className="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 font-bold font-mono text-[10px] px-3 py-1.5 rounded-lg text-white disabled:opacity-40"
+                            className="bg-white/5 border border-white/10 active:scale-95 font-bold font-mono text-[10px] px-3 py-2 rounded-xl text-white disabled:opacity-40"
                           >
-                            ◄ Précédent
+                            ◄
                           </button>
-                          <span className="text-xs font-mono text-white/50">
-                            Page <strong className="text-white">{currentPage}</strong> sur {Math.ceil(getFilteredPreview(parsedPreviewChannels, previewFilter, selectedPreviewCategory).length / 20) || 1} ({getFilteredPreview(parsedPreviewChannels, previewFilter, selectedPreviewCategory).length} filtrés)
+                          <span className="text-[10px] sm:text-xs font-mono text-white/40 uppercase tracking-widest">
+                            Page <strong className="text-white bg-white/5 px-2 py-0.5 rounded">{currentPage}</strong> / {Math.ceil(getFilteredPreview(parsedPreviewChannels, previewFilter, selectedPreviewCategory).length / 20) || 1}
                           </span>
                           <button 
                             disabled={currentPage >= Math.ceil(getFilteredPreview(parsedPreviewChannels, previewFilter, selectedPreviewCategory).length / 20)}
                             onClick={() => setCurrentPage(prev => Math.min(Math.ceil(getFilteredPreview(parsedPreviewChannels, previewFilter, selectedPreviewCategory).length / 20), prev + 1))}
-                            className="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 font-bold font-mono text-[10px] px-3 py-1.5 rounded-lg text-white disabled:opacity-40"
+                            className="bg-white/5 border border-white/10 active:scale-95 font-bold font-mono text-[10px] px-3 py-2 rounded-xl text-white disabled:opacity-40"
                           >
-                            Suivant ►
+                            ►
                           </button>
                         </div>
 
                         {/* Import and Back Buttons */}
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 w-full sm:w-auto">
                           <button 
                             onClick={() => {
                               setParsedPreviewChannels([]);
@@ -1297,18 +1379,18 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                               setLocalFile(null);
                               setGlobalCategoryOverride('');
                             }}
-                            className="px-5 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-xs font-black uppercase tracking-widest border border-white/5 transition-all"
+                            className="flex-1 sm:flex-none px-5 py-4 rounded-2xl bg-white/5 active:bg-white/10 text-white/40 font-black text-[10px] uppercase tracking-[0.2em] transition-all"
                             disabled={isProcessing}
                           >
-                            Retour
+                            Lâcher
                           </button>
                           <button 
                             onClick={handleBulkImportSubmit}
-                            className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-red-600/30 flex items-center gap-2"
+                            className="flex-[2] sm:flex-none px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-red-600/30 flex items-center justify-center gap-2"
                             disabled={isProcessing || channelsToImport.length === 0}
                           >
-                            {isProcessing ? <RefreshCw className="animate-spin" size={16} /> : <Check size={16} />}
-                            Importer la sélection ({channelsToImport.length})
+                            {isProcessing ? <RefreshCw className="animate-spin" size={16} /> : <FileUp size={16} />}
+                            Importer ({channelsToImport.length})
                           </button>
                         </div>
                       </div>
@@ -1319,11 +1401,12 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
             )}
 
             <div className="bg-white/[0.01] rounded-[2.5rem] border border-white/5 overflow-hidden">
-              <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left text-xs border-collapse">
+              {!isMobile ? (
+                <div className="overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left text-xs border-collapse">
                   <thead className="bg-white/[0.03] text-white/40 font-black uppercase tracking-widest border-b border-white/10">
                     <tr>
-                      <th className="px-6 py-6 w-12">
+                      <th className="px-4 md:px-6 py-6 w-12">
                         <input 
                           type="checkbox"
                           checked={selectedChannels.length === channels.length && channels.length > 0}
@@ -1331,12 +1414,12 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                           className="w-4 h-4 rounded-lg bg-white/5 border-white/20 accent-red-600"
                         />
                       </th>
-                      <th className="px-6 py-6">Canal</th>
-                      <th className="px-6 py-6">Signal</th>
-                      <th className="px-6 py-6">Catégorie / Pays</th>
-                      <th className="px-6 py-6">Source URL</th>
-                      <th className="px-6 py-6">EPG Mapping</th>
-                      <th className="px-6 py-6 text-right">Actions</th>
+                      <th className="px-4 md:px-6 py-6">Canal</th>
+                      <th className="hidden md:table-cell px-6 py-6">Signal</th>
+                      <th className="hidden lg:table-cell px-6 py-6 font-mono text-[10px]">Catégorie / Pays</th>
+                      <th className="hidden xl:table-cell px-6 py-6 font-mono text-[10px]">Source URL</th>
+                      <th className="hidden md:table-cell px-6 py-6 uppercase font-mono text-[10px]">EPG Mapping</th>
+                      <th className="px-4 md:px-6 py-6 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -1450,8 +1533,69 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                       </tr>
                     ))}
                   </tbody>
-                </table>
-              </div>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-4 space-y-3">
+                  {channels.filter(c => 
+                    (c.name || '').toLowerCase().includes(search.toLowerCase()) || 
+                    (c.category && (c.category || '').toLowerCase().includes(search.toLowerCase())) ||
+                    (c.country || '').toLowerCase().includes(search.toLowerCase())
+                  ).map((channel, i) => (
+                    <div 
+                      key={`${channel.id || 'chan'}-${i}`}
+                      onClick={() => toggleChannelSelection(channel.id)}
+                      className={cn(
+                        "bg-white/[0.03] border border-white/5 rounded-2xl p-4 transition-all active:scale-[0.98]",
+                        selectedChannels.includes(channel.id) ? "border-red-600/50 bg-red-600/5" : ""
+                      )}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-black border border-white/10 rounded-xl p-2 shrink-0 flex items-center justify-center">
+                          {channel.logo ? (
+                            <img src={channel.logo} alt="" className="w-full h-full object-contain" />
+                          ) : (
+                            <Tv size={18} className="text-white/30" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                             <h4 className="font-black text-white text-sm uppercase truncate tracking-tight">{channel.name}</h4>
+                             <div className={cn(
+                               "w-2 h-2 rounded-full shrink-0",
+                               channel.status === 'online' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-red-500"
+                             )} />
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                             <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest truncate leading-none">
+                               #{channel.channelNumber || '--'} • {channel.category}
+                             </span>
+                             {channel.country && <span className="bg-white/5 text-white/30 px-1 rounded text-[8px] font-black uppercase tracking-tighter leading-none">{channel.country}</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                           <button 
+                              onClick={() => {
+                                setEditingId(channel.id);
+                                setFormData(channel);
+                                setIsAdding(true);
+                              }}
+                              className="p-2 text-white/40 active:text-white"
+                           >
+                             <Edit2 size={16} />
+                           </button>
+                           <button 
+                              onClick={() => onDeleteChannel(channel.id)}
+                              className="p-2 text-white/40 active:text-red-500"
+                           >
+                             <Trash2 size={16} />
+                           </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -1582,55 +1726,94 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
             animate={{ opacity: 1 }}
             className="space-y-6"
           >
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <div>
                 <h2 className="text-xl font-black text-white uppercase tracking-tight">Santé des Flux</h2>
-                <p className="text-white/40 text-xs mt-1">Diagnostic en temps réel et métriques de performance.</p>
+                <p className="text-white/40 text-xs mt-1">Diagnostic en temps réel et métriques.</p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-3 w-full sm:w-auto">
                 <button 
                   onClick={() => axios.post('/api/channels/check')}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 transition-all"
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 transition-all"
                 >
-                  <Activity size={14} /> Lancer Diagnostic
+                  <Activity size={14} /> Diagnostic
                 </button>
               </div>
             </div>
 
             <div className="bg-white/[0.01] rounded-[2.5rem] border border-white/5 overflow-hidden">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-white/[0.03] text-white/40 font-black uppercase tracking-widest border-b border-white/10 text-[9px]">
-                  <tr>
-                    <th className="px-6 py-4">Nom</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4">Latence</th>
-                    <th className="px-6 py-4">Résolution</th>
-                    <th className="px-6 py-4">Codec V/A</th>
-                    <th className="px-6 py-4">Format</th>
-                    <th className="px-6 py-4">Serveur</th>
-                    <th className="px-6 py-4 text-right">Dernier Scan</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {channels.map((ch, i) => (
-                    <tr key={`stream-row-${ch.id || 'ch'}-${i}`} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-4 font-black tracking-tight">{ch.name}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                           <div className={cn("w-1.5 h-1.5 rounded-full", ch.status === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500')} />
-                           <span className={cn("uppercase text-[8px] font-black", ch.status === 'online' ? 'text-emerald-500' : 'text-red-500')}>{ch.status}</span>
+               {!isMobile ? (
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-white/[0.03] text-white/40 font-black uppercase tracking-widest border-b border-white/10 text-[9px]">
+                      <tr>
+                        <th className="px-6 py-4">Nom</th>
+                        <th className="px-6 py-4">Status</th>
+                        <th className="px-6 py-4">Latence</th>
+                        <th className="px-6 py-4">Résolution</th>
+                        <th className="px-6 py-4">Codec V/A</th>
+                        <th className="px-6 py-4">Format</th>
+                        <th className="px-6 py-4">Serveur</th>
+                        <th className="px-6 py-4 text-right">Dernier Scan</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {channels.map((ch, i) => (
+                        <tr key={`stream-row-${ch.id || 'ch'}-${i}`} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="px-6 py-4 font-black tracking-tight">{ch.name}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                               <div className={cn("w-1.5 h-1.5 rounded-full", ch.status === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500')} />
+                               <span className={cn("uppercase text-[8px] font-black", ch.status === 'online' ? 'text-emerald-500' : 'text-red-500')}>{ch.status}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 font-mono text-[9px] text-white/60">{ch.responseTime || '--'} ms</td>
+                          <td className="px-6 py-4 font-mono text-[9px] text-white/60">{ch.resolution || 'Auto'}</td>
+                          <td className="px-6 py-4 font-mono text-[9px] text-white/60">{ch.codecVideo || 'H264'} / {ch.codecAudio || 'AAC'}</td>
+                          <td className="px-6 py-4"><span className="px-1.5 py-0.5 bg-white/5 rounded text-[8px] font-mono text-white/40 uppercase">{ch.format || 'HLS'}</span></td>
+                          <td className="px-6 py-4 font-mono text-[9px] text-white/40 uppercase tracking-widest">{ch.server || 'Main'}</td>
+                          <td className="px-6 py-4 text-right text-white/20 font-mono text-[8px]">{ch.lastCheck ? new Date(ch.lastCheck).toLocaleTimeString() : 'N/A'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+               ) : (
+                  <div className="p-4 space-y-3">
+                    {channels.map((ch, i) => (
+                      <div key={`stream-card-${ch.id || 'ch'}-${i}`} className="p-5 bg-white/[0.02] border border-white/5 rounded-3xl">
+                        <div className="flex justify-between items-start mb-4">
+                           <div>
+                              <h4 className="font-black text-white text-sm uppercase tracking-tight">{ch.name}</h4>
+                              <div className="flex items-center gap-2 mt-1">
+                                 <div className={cn("w-1.5 h-1.5 rounded-full", ch.status === 'online' ? 'bg-emerald-500' : 'bg-red-500')} />
+                                 <span className={cn("uppercase text-[9px] font-black tracking-widest", ch.status === 'online' ? 'text-emerald-500' : 'text-red-500')}>{ch.status}</span>
+                              </div>
+                           </div>
+                           <div className="bg-white/5 border border-white/10 px-2 py-1 rounded-lg text-[9px] font-mono text-white/40 uppercase font-bold">
+                              {ch.format || 'HLS'}
+                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 font-mono text-[9px] text-white/60">{ch.responseTime || '--'} ms</td>
-                      <td className="px-6 py-4 font-mono text-[9px] text-white/60">{ch.resolution || 'Auto'}</td>
-                      <td className="px-6 py-4 font-mono text-[9px] text-white/60">{ch.codecVideo || 'H264'} / {ch.codecAudio || 'AAC'}</td>
-                      <td className="px-6 py-4"><span className="px-1.5 py-0.5 bg-white/5 rounded text-[8px] font-mono text-white/40 uppercase">{ch.format || 'HLS'}</span></td>
-                      <td className="px-6 py-4 font-mono text-[9px] text-white/40 uppercase tracking-widest">{ch.server || 'Main'}</td>
-                      <td className="px-6 py-4 text-right text-white/20 font-mono text-[8px]">{ch.lastCheck ? new Date(ch.lastCheck).toLocaleTimeString() : 'N/A'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <div className="grid grid-cols-2 gap-4">
+                           <div className="space-y-1">
+                              <p className="text-[9px] text-white/20 font-black uppercase tracking-widest">Latence</p>
+                              <p className="text-[10px] font-mono text-white/70">{ch.responseTime || '--'} ms</p>
+                           </div>
+                           <div className="space-y-1">
+                              <p className="text-[9px] text-white/20 font-black uppercase tracking-widest">Résolution</p>
+                              <p className="text-[10px] font-mono text-white/70">{ch.resolution || '--'}</p>
+                           </div>
+                           <div className="space-y-1">
+                              <p className="text-[9px] text-white/20 font-black uppercase tracking-widest">Codec</p>
+                              <p className="text-[10px] font-mono text-white/70">{ch.codecVideo || 'H264'}</p>
+                           </div>
+                           <div className="space-y-1 text-right">
+                              <p className="text-[9px] text-white/20 font-black uppercase tracking-widest">Dernier Check</p>
+                              <p className="text-[10px] font-mono text-white/40">{ch.lastCheck ? new Date(ch.lastCheck).toLocaleTimeString() : 'N/A'}</p>
+                           </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+               )}
             </div>
           </motion.div>
         )}

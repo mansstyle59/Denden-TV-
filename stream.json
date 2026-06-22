@@ -1,0 +1,94 @@
+{
+  "streams": [
+    {
+      "name": "TVMio",
+      "title": "Source 1 - FHD",
+      "url": "http://bouygues-cdn.r1v.us:8080/live/d49dc02ec79b/k5cfhnm1/47988.m3u8",
+      "behaviorHints": {
+        "notWebReady": true,
+        "bingeGroup": "tvmio-live-tvmio-VEYxLmZyX0ZS"
+      }
+    },
+    {
+      "name": "TVMio",
+      "title": "Source 2 - FHD",
+      "url": "http://bouygues-cdn.r1v.us:8080/live/d49dc02ec79b/k5cfhnm1/6366.m3u8",
+      "behaviorHints": {
+        "notWebReady": true,
+        "bingeGroup": "tvmio-live-tvmio-VEYxLmZyX0ZS"
+      }
+    },
+    {
+      "name": "TVMio",
+      "title": "Source 3 - FHD",
+      "url": "http://bouygues-cdn.r1v.us:8080/live/d49dc02ec79b/k5cfhnm1/73961.m3u8",
+      "behaviorHints": {
+        "notWebReady": true,
+        "bingeGroup": "tvmio-live-tvmio-VEYxLmZyX0ZS"
+      }
+    },
+    {
+      "name": "TVMio",
+      "title": "Source 4 - FHD",
+      "url": "https://helpfullive.info/tf1/tracks-v1a1/mono.ts.m3u8?token=2d6c78065c5ff3fbc623059902513ffbb76e3326-457cd9431680768277e3c37437021b7f-1778821016-1778810216",
+      "behaviorHints": {
+        "notWebReady": true,
+        "bingeGroup": "tvmio-live-tvmio-VEYxLmZyX0ZS"
+      }
+    },
+    {
+      "name": "TVMio",
+      "title": "Source 1 - HD",
+      "url": "http://bouygues-cdn.r1v.us:8080/live/d49dc02ec79b/k5cfhnm1/5835.m3u8",
+      "behaviorHints": {
+        "notWebReady": true,
+        "bingeGroup": "tvmio-live-tvmio-VEYxLmZyX0ZS"
+      }
+    },
+    {
+      "name": "TVMio",
+      "title": "Source 2 - HD",
+      "url": "http://151.80.18.177:86/TF1_HD/index.m3u8",
+      "behaviorHints": {
+        "notWebReady": true,
+        "bingeGroup": "tvmio-live-tvmio-VEYxLmZyX0ZS"
+      }
+    },
+    {
+      "name": "TVMio",
+      "title": "Source 1 - SD",
+      "url": "https://viamotionhsi.netplus.ch/live/eds/tf1hd/browser-dash/tf1hd.mpd",
+      "behaviorHints": {
+        "notWebReady": true,
+        "bingeGroup": "tvmio-live-tvmio-VEYxLmZyX0ZS"
+      }
+    },
+    {
+      "name": "TVMio",
+      "title": "Source 2 - SD",
+      "url": "https://cachehsi1a.netplus.ch/tok_eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOiIxNzc2OTIzMDc5Iiwic2lwIjoiIiwicGF0aCI6Ii9saXZlL2Vkcy90ZjFoZC9icm93c2VyLUhMUzgvIiwic2Vzc2lvbl9jZG5faWQiOiIwYzNmYTMwYTgyMjVhNDdjIiwic2Vzc2lvbl9pZCI6IiIsImNsaWVudF9pZCI6IiIsImRldmljZV9pZCI6IiIsIm1heF9zZXNzaW9ucyI6MCwic2Vzc2lvbl9kdXJhdGlvbiI6MCwidXJsIjoiaHR0cHM6Ly8xMC4wLjIyOS4xOCIsInNlc3Npb25fdGltZW91dCI6MCwiYXVkIjoiNDEiLCJzb3VyY2VzIjpbMTAwXX0=.qmUVyHjCeuICsQpJ4_ocG4G_-A-pz0Da4L5QyLtvjk1XWa82TJGkS_jk_l19deJCPRu5zb6lNr4QEyvz1t7LNQ==/live/eds/tf1hd/browser-HLS8/tf1hd-avc1_700000=10003-mp4a_130400_fra=20000.m3u8",
+      "behaviorHints": {
+        "notWebReady": true,
+        "bingeGroup": "tvmio-live-tvmio-VEYxLmZyX0ZS"
+      }
+    },
+    {
+      "name": "TVMio",
+      "title": "Source 3 - SD",
+      "url": "http://amir11.bounceme.net:8080/RamVRqbYm0/ElTBZO0eN8/636",
+      "behaviorHints": {
+        "notWebReady": true,
+        "bingeGroup": "tvmio-live-tvmio-VEYxLmZyX0ZS"
+      }
+    },
+    {
+      "name": "TVMio",
+      "title": "Source 4 - SD",
+      "url": "http://sinlimitestv.com:8080/live/Pc6yG4pYzX/AMT7QUfHSf/303608.m3u8",
+      "behaviorHints": {
+        "notWebReady": true,
+        "bingeGroup": "tvmio-live-tvmio-VEYxLmZyX0ZS"
+      }
+    }
+  ]
+}

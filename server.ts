@@ -1071,6 +1071,65 @@ async function startServer() {
           }
         }
 
+        // --- NEW: Scraping mon-programme-tv.be (Belgian channels) ---
+        try {
+          const d = new Date();
+          const beFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Paris', hour: 'numeric', hour12: false });
+          let hour = parseInt(beFormatter.format(d), 10);
+          console.log(`Background scraping mon-programme-tv.be for live EPG (hour ${hour})...`);
+
+          const beResponse = await axios.get(`https://www.mon-programme-tv.be/mon-programme-television/aujourdhui/${hour}.html`, {
+            headers: { 'User-Agent': 'Mozilla/5.0' },
+            timeout: 10000
+          });
+          const beHtml = beResponse.data;
+          
+          const channels = beHtml.split('<div class="grille-channel">');
+          channels.shift();
+          
+          for (const channelHtml of channels) {
+              let channelName = '';
+              const imgMatch = channelHtml.match(/<img[^>]+alt="([^"]+)"/i);
+              if (imgMatch) {
+                 channelName = imgMatch[1]
+                    .replace('Programmation télé de ', '')
+                    .replace('Programme télé de ', '')
+                    .replace('Programme TV de ', '')
+                    .replace('Programme télé ', '')
+                    .replace('Programme TV ', '')
+                    .trim();
+              }
+              if (!channelName) continue;
+              const normName = normalizeChannelName(channelName);
+              
+              if (programs[normName]) continue; // don't override french variants if already have
+              
+              const boxes = channelHtml.split('<div class="box ').slice(1);
+              if (boxes.length > 0) {
+                  const box = boxes[0];
+                  const titleMatch = box.match(/class="title"[^>]*>([^<]+)<\//);
+                  const title = titleMatch ? unescape(titleMatch[1].trim()) : '';
+                  
+                  const timeMatch = box.match(/class="hour"[^>]*>([^<]+)<\//);
+                  const time = timeMatch ? timeMatch[1].trim() : '';
+
+                  const linkMatch = box.match(/href="([^"]+)"/);
+                  
+                  programs[normName] = {
+                      title,
+                      time,
+                      progress: 50,
+                      image: null,
+                      link: linkMatch ? linkMatch[1] : null,
+                      channelName
+                  };
+              }
+          }
+        } catch (beErr: any) {
+             console.error("mon-programme-tv.be scraping failed:", beErr.message);
+        }
+        // -------------------------------------------------------------
+
         programmeTvCache = { data: programs, timestamp: Date.now() };
         console.log(`Background scrape completed. Cache updated with ${Object.keys(programs).length} channels.`);
         
@@ -2117,6 +2176,39 @@ async function startServer() {
     }
   });
 
+  app.get('/api/proxy/tvmio', async (req, res) => {
+    const id = req.query.id as string;
+    if (!id) return res.status(400).send('Missing TVMio ID');
+
+    try {
+      const baseUrl = 'https://tvmio.ooguy.com/eyJjb3VudHJpZXMiOlsiRlIiXSwmY2F0ZWdvcmllcyI6eyJGUiI6WyJHZW5lcmFsIPCfk7oiLCJTcG9ydHMg4pq9IiwiRG9jdW1lbnRhaXJlcyDwn4yNIiwiRmlsbXMg8J+OrCIsIkluZm9ybWF0aW9ucyDwn5OwIiwiTXVzaWMg8J+OtSIsIkVuZmFudHMg8J+RtiJdfSwiZW5hYmxlU2VhcmNoIjp0cnVlfQ';
+      const streamUrl = `${baseUrl}/stream/tv/${id}.json`;
+      
+      const response = await axios.get(streamUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+
+      const streams = response.data.streams;
+      if (!streams || streams.length === 0) {
+        return res.status(404).send('No streams found for this ID');
+      }
+
+      // Find the best stream (Source 1 FHD usually best)
+      const bestStream = streams.find((s: any) => s.title.includes('FHD')) || streams[0];
+      
+      if (!bestStream.url) {
+        return res.status(404).send('Stream URL not found');
+      }
+
+      res.redirect(`/api/proxy/stream?url=${encodeURIComponent(bestStream.url)}&referer=${encodeURIComponent('https://tvmio.ooguy.com/')}`);
+    } catch (err: any) {
+      console.error('[TVMio Proxy Error]', err.message);
+      res.status(500).send('TVMio proxy internal error');
+    }
+  });
+
   // VAVOO IPTV Stream Proxy Integration
   let cachedVavooSignature = '';
   let cachedVavooSigTimestamp = 0;
@@ -2266,6 +2358,62 @@ async function startServer() {
     } catch (err: any) {
       console.error('[VAVOO PROXY ERROR]', err.message);
       res.status(500).send('VAVOO internal proxy error. Please try again later.');
+    }
+  });
+
+
+  app.post('/api/channels/import-tvmio', async (req, res) => {
+    try {
+      const manifestUrl = 'https://tvmio.ooguy.com/eyJjb3VudHJpZXMiOlsiRlIiXSwmY2F0ZWdvcmllcyI6eyJGUiI6WyJHZW5lcmFsIPCfk7oiLCJTcG9ydHMg4pq9IiwiRG9jdW1lbnRhaXJlcyDwn4yNIiwiRmlsbXMg8J+OrCIsIkluZm9ybWF0aW9ucyDwn5OwIiwiTXVzaWMg8J+OtSIsIkVuZmFudHMg8J+RtiJdfSwiZW5hYmxlU2VhcmNoIjp0cnVlfQ';
+      const catalogUrl = `${manifestUrl}/catalog/tv/tvmio_fr.json`;
+      
+      console.log('[TVMio Import] Fetching catalog...');
+      const response = await axios.get(catalogUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+
+      const metas = response.data.metas || [];
+      if (metas.length === 0) {
+        return res.status(404).json({ error: 'No channels found in TVMio catalog' });
+      }
+
+      const db = readDb();
+      let importedCount = 0;
+
+      for (const meta of metas) {
+        const id = `tvmio-${meta.id}`;
+        const existing = db.channels.find((c: any) => c.id === id);
+        
+        if (!existing) {
+          const channelData = {
+            id: id,
+            name: meta.name,
+            logo: meta.logo || meta.poster || 'https://images.unsplash.com/photo-1598257006458-087169a1f08d?auto=format&fit=crop&w=120&h=120',
+            category: meta.genres ? meta.genres[0] : 'TVMio',
+            url: `/api/proxy/tvmio?id=${meta.id}`,
+            status: 'online',
+            viewCount: 0,
+            lastPlayed: null,
+            country: 'France',
+            language: 'Français',
+            description: meta.description || ''
+          };
+          db.channels.push(channelData);
+          importedCount++;
+        }
+      }
+
+      if (importedCount > 0) {
+        writeDb(db);
+        io.emit('CHANNELS_SYNC', db.channels);
+      }
+
+      res.json({ success: true, count: importedCount, totalInCatalog: metas.length });
+    } catch (err: any) {
+      console.error('[TVMio Import Error]', err.message);
+      res.status(500).json({ error: 'Failed to import TVMio channels' });
     }
   });
 
