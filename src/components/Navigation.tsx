@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { DeviceType } from '../hooks/useDeviceType';
 import DendenLogo from './DendenLogo';
+import useLongPress from '../hooks/useLongPress';
 
 interface NavigationProps {
   activeSection: string;
@@ -11,6 +12,62 @@ interface NavigationProps {
   isCollapsed?: boolean;
   deviceType: DeviceType;
   isPrivateUnlocked?: boolean;
+  onLockPrivate?: () => void;
+}
+
+interface NavigationButtonProps {
+  onClick: () => void;
+  onLongPress?: () => void;
+  className: string;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+  key?: React.Key;
+}
+
+function NavigationButton({ onClick, onLongPress, className, style, children }: NavigationButtonProps) {
+  if (onLongPress) {
+    return (
+      <NavigationButtonWithLongPress
+        onClick={onClick}
+        onLongPress={onLongPress}
+        className={className}
+        style={style}
+      >
+        {children}
+      </NavigationButtonWithLongPress>
+    );
+  }
+
+  return (
+    <button onClick={onClick} className={className} style={style}>
+      {children}
+    </button>
+  );
+}
+
+function NavigationButtonWithLongPress({ onClick, onLongPress, className, style, children }: NavigationButtonProps) {
+  const { isHolding, ...longPressEvents } = useLongPress({
+    onLongPress: () => {
+      if (onLongPress) onLongPress();
+    },
+    onClick: onClick,
+    ms: 800
+  });
+
+  return (
+    <button
+      className={cn(className, isHolding && "scale-95 bg-white/5")}
+      style={style}
+      {...longPressEvents}
+    >
+      {isHolding && (
+        <div className="absolute inset-0 rounded-[inherit] border-2 border-red-500 overflow-hidden pointer-events-none z-50">
+          <div className="h-1 bg-red-500 animate-[long-press-progress_800ms_linear_forwards]" style={{ transformOrigin: 'left' }} />
+        </div>
+      )}
+      {children}
+    </button>
+  );
 }
 
 const defaultMenuItems = [
@@ -20,7 +77,7 @@ const defaultMenuItems = [
   { id: 'search', icon: Search, label: 'Recherche' },
 ];
 
-export default function Navigation({ activeSection, onSectionChange, isCollapsed = false, deviceType, isPrivateUnlocked }: NavigationProps) {
+export default function Navigation({ activeSection, onSectionChange, isCollapsed = false, deviceType, isPrivateUnlocked, onLockPrivate }: NavigationProps) {
   const isMobile = deviceType === 'mobile';
 
   const menuItems = React.useMemo(() => {
@@ -37,9 +94,10 @@ export default function Navigation({ activeSection, onSectionChange, isCollapsed
           {menuItems.map((item) => {
             const isActive = activeSection === item.id;
             return (
-              <button
+              <NavigationButton
                 key={item.id}
                 onClick={() => onSectionChange(item.id)}
+                onLongPress={item.id === 'private_hub' ? onLockPrivate : undefined}
                 className={cn(
                   "flex flex-col items-center justify-center relative w-[18%] min-w-[3.5rem] h-14 rounded-full transition-all focus:outline-none group",
                   isActive ? "text-white" : "text-white/40 hover:text-white/80"
@@ -60,7 +118,7 @@ export default function Navigation({ activeSection, onSectionChange, isCollapsed
                   "text-[9px] font-black tracking-widest relative z-10 uppercase transition-colors duration-300", 
                   isActive ? "text-white" : "text-white/50"
                 )}>{item.label}</span>
-              </button>
+              </NavigationButton>
             );
           })}
         </nav>
@@ -87,9 +145,10 @@ export default function Navigation({ activeSection, onSectionChange, isCollapsed
         {menuItems.map((item) => {
           const isActive = activeSection === item.id;
           return (
-            <button
+            <NavigationButton
               key={item.id}
               onClick={() => onSectionChange(item.id)}
+              onLongPress={item.id === 'private_hub' ? onLockPrivate : undefined}
               className={cn(
                 "w-full flex items-center px-4 py-4 rounded-2xl transition-all font-bold text-xs uppercase tracking-widest focus:outline-none relative overflow-hidden group cursor-pointer",
                 isActive ? "text-white" : "text-white/40 hover:text-white"
@@ -112,7 +171,7 @@ export default function Navigation({ activeSection, onSectionChange, isCollapsed
                 </div>
                 {(!isCollapsed || deviceType === 'tv') && <span className="truncate">{item.label}</span>}
               </div>
-            </button>
+            </NavigationButton>
           );
         })}
       </div>

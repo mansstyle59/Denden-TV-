@@ -15,9 +15,6 @@ import zlib from 'zlib';
 import { parseStringPromise } from 'xml2js';
 import { Movie } from './src/types';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const PORT = 3000;
 const DB_PATH = path.join(process.cwd(), 'db.json');
 const EPG_CACHE_PATH = path.join(process.cwd(), 'epg_cache.json');
@@ -213,7 +210,8 @@ function normalizeChannelName(name: any): string {
   return name
     .toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // remove accents
-    .replace(/\b(fr|fr:|fhd|hd|sd|4k|hevc|vip|backup|fhd:|hd:|ts|usa|es|be|ch:|direct)\b/g, '')
+    .replace(/\b(fhd|hd|sd|4k|hevc|vip|backup|ts|usa|es|direct)\b/g, '')
+    .replace(/\b(fr|be|ch)(:|\s*$)/g, '')
     .replace(/[^a-z0-9]/g, '')
     .trim();
 }
@@ -351,6 +349,11 @@ async function syncEPG(io: Server) {
           const title = getXMLTVText(prog.title);
           const desc = getXMLTVText(prog.desc);
           const category = getXMLTVText(prog.category);
+          
+          let icon = '';
+          if (prog.icon && Array.isArray(prog.icon) && prog.icon[0] && prog.icon[0].$) {
+             icon = prog.icon[0].$.src || '';
+          }
 
           const startTime = parseXMLTVDate(startStr).toISOString();
           const endTime = parseXMLTVDate(stopStr).toISOString();
@@ -360,6 +363,7 @@ async function syncEPG(io: Server) {
             title,
             description: desc,
             category,
+            icon,
             startTime,
             endTime
           });
@@ -435,6 +439,11 @@ async function startServer() {
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
   
+  app.post('/api/log-error', (req, res) => {
+    console.error('CLIENT ERROR LOGGED:', req.body);
+    res.json({ ok: true });
+  });
+
   // Load cache initially
   loadEpgCache();
   
@@ -995,8 +1004,8 @@ async function startServer() {
     
     (async () => {
       try {
-        console.log('Background scraping programme-tv.net for live EPG...');
-        const response = await axios.get('https://www.programme-tv.net/programme/en-ce-moment.html', {
+        console.log('Background scraping tv-programme.com for live EPG...');
+        const response = await axios.get('https://tv-programme.com/tv-direct', {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
           },
@@ -1015,37 +1024,46 @@ async function startServer() {
             .replace(/&apos;/g, "'");
         };
 
-        const rows = html.split(/<div\s+class="gridRow-cards[^"]*">/);
-        rows.shift();
+        const articles = html.split(/<article class="tvp-tv-direct-card-item">/);
+        articles.shift();
 
-        for (const row of rows) {
+        for (const doc of articles) {
           try {
-            const altMatch = row.match(/alt="([^"]+)"/);
-            if (!altMatch) continue;
-            const channelName = altMatch[1].trim();
+            const channelMatch = doc.match(/<img[^>]+alt="Logo ([^"]+)"/);
+            if (!channelMatch) continue;
+            let channelName = channelMatch[1].trim();
+
+            // Special case for common variations
+            if (channelName === 'C8') channelName = 'C8'; // ensure it matches normalizer
+
             const normName = normalizeChannelName(channelName);
 
-            const titleMatch = row.match(/class="mainBroadcastCard-title"[^>]*>[\s\S]*?<a[^>]*>([^<]+)<\/a>/i);
-            if (!titleMatch) continue;
-            const title = unescape(titleMatch[1].trim());
+            const titleMatch = doc.match(/<h2 class="tvp_chapitre">([^<]+)<\/h2>/);
+            const title = titleMatch ? unescape(titleMatch[1].trim()) : '';
 
-            const hourMatch = row.match(/class="mainBroadcastCard-startingHour"[^>]*>([^<]+)<\/p>/i);
-            const time = hourMatch ? hourMatch[1].trim() : '';
+            const imageMatch = doc.match(/<img([^>]*)>/g);
+            let image = null;
+            if (imageMatch) {
+              for (const img of imageMatch) {
+                if (img.includes('tvp-tv-direct-card-image')) {
+                  const srcMatch = img.match(/src="([^"]+)"/);
+                  if (srcMatch) image = srcMatch[1];
+                }
+              }
+            }
 
-            const progressMatch = row.match(/class="progressBar"[^>]+value="([^"]+)"/i);
+            const progressMatch = doc.match(/<progress[^>]+value="([^"]+)"/);
             const progress = progressMatch ? parseFloat(progressMatch[1]) : 0;
 
-            const linkMatch = row.match(/<a[^>]+href="([^"]+)"[^>]+class="mainBroadcastCard-titleLink"/i) || 
-                              row.match(/class="mainBroadcastCard-title">[\s\S]*?<a[^>]+href="([^"]+)"/i);
-            const imageMatch = row.match(/<img[^>]+src="([^"]+)"[^>]+class="pictureTagGenerator-image"/i) ||
-                               row.match(/<img[^>]+src="([^"]+)"[^>]*alt="[^"]*"[^>]*class="[^"]*apply-ratio"/i);
+            const timeMatch = doc.match(/<time class="tvp-tv-direct-card-time-start"[^>]*>([^<]+)<\/time>/);
+            const time = timeMatch ? timeMatch[1].trim() : '';
 
             programs[normName] = {
               title,
               time,
               progress,
-              image: imageMatch ? imageMatch[1] : null,
-              link: linkMatch ? `https://www.programme-tv.net${linkMatch[1]}` : null,
+              image: image,
+              link: null, // If needed we could parse href
               channelName
             };
           } catch (e) {

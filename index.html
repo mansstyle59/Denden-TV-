@@ -44,19 +44,41 @@
   </head>
   <body class="bg-black select-none">
     <div id="root"></div>
+    <script>
+      window.addEventListener('error', function(e) {
+        fetch('/api/log-error', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: e.message, source: e.filename, lineno: e.lineno, colno: e.colno, error: e.error ? e.error.stack : null })
+        });
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        fetch('/api/log-error', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: e.reason ? (e.reason.message || e.reason) : 'Unhandled Rejection', stack: e.reason ? e.reason.stack : null })
+        });
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Register Progressive Web App Service Worker
-      if ('serviceWorker' in navigator && window.location.protocol !== 'http:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then((registration) => {
-              console.log('Denden TV PWA Service Worker registered with scope: ', registration.scope);
-            })
-            .catch((err) => {
-              console.error('Service Worker registration failed: ', err);
-            });
+      // Clear out the old PWA caching service worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+          }
         });
+        
+        // Register the new no-op sw.js to ensure immediate override
+        if (window.location.protocol !== 'http:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+              .then((registration) => {
+                registration.update();
+              });
+          });
+        }
       }
     </script>
   </body>

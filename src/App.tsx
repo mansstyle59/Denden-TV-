@@ -22,10 +22,17 @@ import PrivatePlutoPage from './components/PrivatePlutoPage';
 import SportPage from './components/SportPage';
 import { PLUTO_CHANNELS } from './plutoChannels';
 import { Settings, Shield, Lock, Search, Filter, History, Star, Play, ChevronRight, Plus, Maximize2, Trash2, Hash, Tv, Film, X, Sparkles, BookOpen, Users, Calendar, Clock, Globe } from 'lucide-react';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { cn } from './lib/utils';
 
 const socket = io();
+
+const isAdultChannel = (c: Channel): boolean => {
+  if (c.isPrivate) return true;
+  if (c.category && /adulte|adult|xxx|sexe|charm|erotic|porn/i.test(c.category)) return true;
+  if (c.name && /\b(xxx|porn|erotic|sexe|colmax|libidin|dorcel|hustler|playboy|redlight|penthouse|beate uhse|pinko|sexy|adult|\+18|\-18)\b/i.test(c.name)) return true;
+  return false;
+};
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -42,27 +49,44 @@ export default function App() {
   const [pinInput, setPinInput] = useState('');
   const [showPinModal, setShowPinModal] = useState(false);
   const [channelsSearch, setChannelsSearch] = useState('');
-  const [searchTab, setSearchTab] = useState<'all' | 'channels' | 'movies'>('all');
+  const [searchTab, setSearchTab] = useState<'all' | 'channels' | 'movies' | 'adults'>('all');
   const [searchDetailMovie, setSearchDetailMovie] = useState<Movie | null>(null);
+
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('denden_search_history');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   
   const deviceType = useDeviceType();
   const { focusedId } = useTVNav();
 
   // Fetch initial data
   useEffect(() => {
-    const fetchData = async () => {
+    let isMounted = true;
+    const fetchData = async (retries = 3) => {
       try {
         const [dataRes, moviesRes, epgRes] = await Promise.all([
           axios.get('/api/data'),
           axios.get('/api/movies'),
           axios.get('/api/epg/live')
         ]);
+        if (!isMounted) return;
         setChannels([...dataRes.data.channels, ...PLUTO_CHANNELS]);
         setMovies(moviesRes.data);
         setSettings(dataRes.data.settings);
         setLiveEpg(epgRes.data);
-      } catch (err) {
-        console.error('Error fetching data:', err);
+      } catch (err: any) {
+        if (!isMounted) return;
+        if (retries > 0 && err.message === 'Network Error') {
+          console.warn('Network Error, retrying...', retries, 'attempts left');
+          setTimeout(() => fetchData(retries - 1), 2000);
+        } else {
+          console.error('Error fetching data:', err);
+        }
       }
     };
     fetchData();
@@ -82,6 +106,7 @@ export default function App() {
     socket.on('EPG_LIVE_UPDATE', (data: any) => setLiveEpg(data));
 
     return () => {
+      isMounted = false;
       socket.off('CHANNELS_SYNC');
       socket.off('MOVIES_UPDATED');
       socket.off('CHANNEL_ADDED');
@@ -120,18 +145,18 @@ export default function App() {
   }, []);
 
   const visibleChannels = useMemo(() => {
-    return channels.filter(c => !c.isPrivate && !PLUTO_CHANNELS.some(pc => pc.id === c.id));
+    return channels.filter(c => !isAdultChannel(c) && !PLUTO_CHANNELS.some(pc => pc.id === c.id));
   }, [channels]);
 
   const allVisibleForPlayer = useMemo(() => {
     // This is for next/prev navigation in common player
     // If we're watching a Pluto channel, we want to skip between Pluto channels
     // If we're watching a normal channel, we skip between normal channels
-    return channels.filter(c => !c.isPrivate);
+    return channels.filter(c => !isAdultChannel(c));
   }, [channels]);
 
   const privateChannels = useMemo(() => {
-    return channels.filter(c => c.isPrivate);
+    return channels.filter(c => isAdultChannel(c));
   }, [channels]);
 
 
@@ -210,6 +235,14 @@ export default function App() {
     setActiveSection(section);
   };
 
+  const handleLockPrivate = useCallback(() => {
+    setSelectedChannel(null);
+    setIsFullScreenPlayer(false);
+    setIsPrivateUnlocked(false);
+    setActiveSection('home');
+    toast.success("Zone Privée Fermée & Sécurisée.");
+  }, []);
+
   const [showChannelActions, setShowChannelActions] = useState<{ channel: Channel, isOpen: boolean } | null>(null);
 
   const handleChannelLongPress = (channel: Channel) => {
@@ -286,8 +319,8 @@ export default function App() {
       case 'channels': {
         const filtered = visibleChannels
           .filter(c => 
-            c.name.toLowerCase().includes(channelsSearch.toLowerCase()) || 
-            c.category.toLowerCase().includes(channelsSearch.toLowerCase())
+            (c.name || '').toLowerCase().includes(channelsSearch.toLowerCase()) || 
+            (c.category || '').toLowerCase().includes(channelsSearch.toLowerCase())
           ).sort((a, b) => (a.channelNumber || 9999) - (b.channelNumber || 9999));
         return (
           <div className={cn("space-y-10", isMobile ? "pb-24" : "")}>
@@ -390,6 +423,7 @@ export default function App() {
             onChannelSelect={handleSelectChannel}
             onBack={() => setActiveSection('channels')}
             deviceType={deviceType}
+            liveEpg={liveEpg}
           />
         );
       case 'private_hub':
@@ -402,98 +436,179 @@ export default function App() {
           />
         );
       case 'search': {
+        const searchParentalLocked = !isPrivateUnlocked;
         const query = channelsSearch.trim().toLowerCase();
         
+        // Match Highlight helper
+        const highlightMatch = (text: string, term: string) => {
+          if (!term) return <span>{text}</span>;
+          const parts = text.split(new RegExp(`(${term.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')})`, 'gi'));
+          return (
+            <span>
+              {parts.map((part, i) => 
+                part.toLowerCase() === term.toLowerCase() 
+                  ? <mark key={i} className="bg-indigo-600/40 text-rose-300 font-extrabold px-0.5 rounded shadow-sm">{part}</mark>
+                  : part
+              )}
+            </span>
+          );
+        };
+
+        // Strict Parental protection. If locked, normal visibleChannels are searched. Adult category is always forbidden.
+        // If unlocked, users can search normal feeds or check the 🔞 Mature space.
         const filteredChannels = query ? visibleChannels
           .filter(c => 
-            c.name.toLowerCase().includes(query) || 
-            c.category.toLowerCase().includes(query) ||
-            (c.description && c.description.toLowerCase().includes(query))
+            (c.name || '').toLowerCase().includes(query) || 
+            (c.category && (c.category || '').toLowerCase().includes(query)) ||
+            (c.description && (c.description || '').toLowerCase().includes(query))
           ) : [];
 
         const filteredMovies = query ? movies.filter(m => 
-          m.title.toLowerCase().includes(query) || 
-          (m.originalTitle && m.originalTitle.toLowerCase().includes(query)) ||
-          m.genres.some(g => g.toLowerCase().includes(query)) ||
-          m.director.toLowerCase().includes(query) ||
-          m.actors.some(a => a.toLowerCase().includes(query)) ||
-          (m.summary && m.summary.toLowerCase().includes(query))
+          (m.title || '').toLowerCase().includes(query) || 
+          (m.originalTitle && (m.originalTitle || '').toLowerCase().includes(query)) ||
+          (m.genres && Array.isArray(m.genres) && m.genres.some(g => (g || '').toLowerCase().includes(query))) ||
+          (m.director && (m.director || '').toLowerCase().includes(query)) ||
+          (m.actors && Array.isArray(m.actors) && m.actors.some(a => (a || '').toLowerCase().includes(query))) ||
+          (m.summary && (m.summary || '').toLowerCase().includes(query))
         ) : [];
 
-        const channelCategories = Array.from(new Set(channels.map(c => c.category))).filter(Boolean);
-        const movieGenres = Array.from(new Set(movies.flatMap(m => m.genres || []))).filter(Boolean);
+        // Adult Channels matching (ONLY searched/shown when parental filter is UNLOCKED)
+        const filteredAdultChannels = (!searchParentalLocked && query) ? privateChannels
+          .filter(c => 
+            (c.name || '').toLowerCase().includes(query) || 
+            (c.category && (c.category || '').toLowerCase().includes(query))
+          ) : [];
+
+        const channelCategories = Array.from(new Set(channels.map(c => c.category))).filter((category): category is string => !!category && category !== 'Adulte');
+        const movieGenres = Array.from(new Set(movies.flatMap(m => (m.genres && Array.isArray(m.genres)) ? m.genres : []))).filter((g): g is string => !!g);
+
+        const addToSearchHistory = (term: string) => {
+          if (!term || term.trim() === '') return;
+          const clean = term.trim();
+          setSearchHistory(prev => {
+            if (prev.includes(clean)) return prev;
+            const next = [clean, ...prev].slice(0, 8);
+            localStorage.setItem('denden_search_history', JSON.stringify(next));
+            return next;
+          });
+        };
+
+        const clearHistory = () => {
+          setSearchHistory([]);
+          localStorage.removeItem('denden_search_history');
+          toast.success("Historique des recherches effacé !");
+        };
+
+        const triggerSearchTag = (tag: string) => {
+          setChannelsSearch(tag);
+          addToSearchHistory(tag);
+        };
+
+        const isMobile = deviceType === 'mobile' || deviceType === 'tablet';
 
         return (
           <div className={cn("space-y-8", isMobile ? "pb-24" : "")}>
-            <div className="flex flex-col bg-white/[0.03] p-6 lg:p-10 rounded-3xl border border-white/5 backdrop-blur-xl gap-6">
-               <div>
-                  <h2 className="text-3xl lg:text-4xl font-black text-white tracking-tighter flex items-center gap-3">
-                    <Search className="text-indigo-500 animate-pulse" size={28} />
-                    Recherche Globale
-                  </h2>
-                  <p className="text-white/40 mt-1 font-medium text-xs sm:text-sm">Explorez instantanément nos chaînes en direct et films en VOD</p>
-               </div>
+            {/* Header section with ambient dark gradient */}
+            <div className="relative overflow-hidden rounded-[32px] border border-white/5 bg-gradient-to-br from-[#101524] via-[#090d16] to-[#04060b] p-6 lg:p-10 shadow-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+               <div className="absolute top-[-20%] left-[-10%] w-[350px] h-[350px] bg-indigo-600/5 rounded-full blur-[90px] pointer-events-none" />
+               <div className="absolute bottom-[-20%] right-[-10%] w-[350px] h-[350px] bg-purple-600/5 rounded-full blur-[90px] pointer-events-none" />
                
-               <div className="relative w-full max-w-2xl">
-                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/40" size={20} />
+               <div className="relative z-10">
+                  <h2 className="text-3xl lg:text-4xl font-extrabold text-white tracking-tighter flex items-center gap-3">
+                    <Search className="text-indigo-500" size={28} />
+                    Moteur de Recherche
+                  </h2>
+                  <p className="text-white/40 mt-1.5 font-medium text-xs sm:text-sm">Trouvez instantanément des chaînes de TV en direct et des milliers de films</p>
+               </div>
+            </div>
+
+            {/* Input form panel */}
+            <div className="bg-white/[0.02] border border-white/5 backdrop-blur-3xl rounded-[24px] p-6 space-y-4">
+               <div className="relative w-full">
+                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/40" size={22} />
                  <input 
-                   className="bg-black/50 border border-white/10 hover:border-white/20 focus:border-indigo-500/50 rounded-2xl py-4 pl-14 pr-12 text-white w-full focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-base font-bold placeholder:text-white/20" 
-                   placeholder="Rechercher une chaîne, un film, un genre, un acteur..." 
+                   className="bg-black/40 border border-white/10 hover:border-white/20 focus:border-indigo-500/80 rounded-2xl py-4.5 pl-14 pr-16 text-white w-full focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-base sm:text-lg font-bold placeholder:text-white/20" 
+                   placeholder="Tapez le nom d'un chaine, d'un film, genre ou réalisateur..." 
                    autoFocus
                    value={channelsSearch}
+                   onKeyDown={(e) => {
+                     if (e.key === 'Enter') addToSearchHistory(channelsSearch);
+                   }}
                    onChange={(e) => setChannelsSearch(e.target.value)}
                  />
                  {channelsSearch && (
                    <button 
                      onClick={() => setChannelsSearch('')}
-                     className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/5 hover:bg-white/15 hover:text-white text-white/45 rounded-full transition-all"
+                     className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/5 hover:bg-white/15 hover:text-white text-white/45 rounded-full transition-all cursor-pointer"
                    >
-                     <X size={15} />
+                     <X size={16} />
                    </button>
                  )}
                </div>
 
+               {/* Tabs and Filters */}
                {query && (
-                 <div className="flex flex-wrap gap-2 border-t border-white/5 pt-4">
-                   <button
-                     onClick={() => setSearchTab('all')}
-                     className={cn(
-                       "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all",
-                       searchTab === 'all' 
-                         ? "bg-red-650 text-white shadow-lg shadow-red-650/15" 
-                         : "bg-white/5 hover:bg-white/10 text-white/50 hover:text-white"
+                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/5 pt-5">
+                   <div className="flex flex-wrap gap-2">
+                     <button
+                       onClick={() => setSearchTab('all')}
+                       className={cn(
+                         "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer",
+                         searchTab === 'all' 
+                           ? "bg-indigo-600 text-white shadow-lg shadow-indigo-650/20" 
+                           : "bg-white/5 hover:bg-white/10 text-white/50 hover:text-white"
+                       )}
+                     >
+                       Tout ({filteredChannels.length + filteredMovies.length + filteredAdultChannels.length})
+                     </button>
+                     <button
+                       onClick={() => setSearchTab('channels')}
+                       className={cn(
+                         "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer",
+                         searchTab === 'channels' 
+                           ? "bg-indigo-600 text-white shadow-lg shadow-indigo-650/20" 
+                           : "bg-white/5 hover:bg-white/10 text-white/50 hover:text-white"
+                       )}
+                     >
+                       <Tv size={14} />
+                       Direct TV ({filteredChannels.length})
+                     </button>
+                     <button
+                       onClick={() => setSearchTab('movies')}
+                       className={cn(
+                         "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer",
+                         searchTab === 'movies' 
+                           ? "bg-indigo-600 text-white shadow-lg shadow-indigo-650/20" 
+                           : "bg-white/5 hover:bg-white/10 text-white/50 hover:text-white"
+                       )}
+                     >
+                       <Film size={14} />
+                       Films & VOD ({filteredMovies.length})
+                     </button>
+
+                     {/* 🔞 Adult contents tab - unlocked-only */}
+                     {!searchParentalLocked && (
+                       <button
+                         onClick={() => setSearchTab('adults')}
+                         className={cn(
+                           "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer",
+                           searchTab === 'adults' 
+                             ? "bg-red-650 text-white shadow-lg shadow-red-650/20" 
+                             : "bg-white/5 hover:bg-red-500/10 text-rose-400 hover:text-red-300 animate-pulse"
+                         )}
+                       >
+                         <span>🔞</span>
+                         Adultes (X) ({filteredAdultChannels.length})
+                       </button>
                      )}
-                   >
-                     Tout ({filteredChannels.length + filteredMovies.length})
-                   </button>
-                   <button
-                     onClick={() => setSearchTab('channels')}
-                     className={cn(
-                       "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5",
-                       searchTab === 'channels' 
-                         ? "bg-red-650 text-white shadow-lg shadow-red-650/15" 
-                         : "bg-white/5 hover:bg-white/10 text-white/50 hover:text-white"
-                     )}
-                   >
-                     <Tv size={13} />
-                     Direct TV ({filteredChannels.length})
-                   </button>
-                   <button
-                     onClick={() => setSearchTab('movies')}
-                     className={cn(
-                       "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5",
-                       searchTab === 'movies' 
-                         ? "bg-red-650 text-white shadow-lg shadow-red-650/15" 
-                         : "bg-white/5 hover:bg-white/10 text-white/50 hover:text-white"
-                     )}
-                   >
-                     <Film size={13} />
-                     Films & VOD ({filteredMovies.length})
-                   </button>
+                   </div>
+
+                   <span className="text-white/20 text-xs font-medium">Recherche interactive instantanée</span>
                  </div>
                )}
             </div>
 
+            {/* Results sections */}
             {query ? (
               <div className="space-y-12">
                 {/* 1. TV Channels results group */}
@@ -506,19 +621,51 @@ export default function App() {
                       </h3>
                     )}
                     {filteredChannels.length > 0 ? (
-                      <ChannelGrid 
-                        channels={filteredChannels} 
-                        onChannelSelect={handleSelectChannel}
-                        onChannelLongPress={handleChannelLongPress}
-                        deviceType={deviceType}
-                        liveEpg={liveEpg}
-                      />
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-3 md:gap-4">
+                        {filteredChannels.map((channel, i) => {
+                          const epg = liveEpg?.[channel.id];
+                          const currentProgram = epg?.programmeTv?.title || epg?.current?.title;
+                          return (
+                            <motion.div
+                              onClick={() => {
+                                handleSelectChannel(channel);
+                                addToSearchHistory(channel.name);
+                              }}
+                              whileHover={{ scale: 1.05 }}
+                              transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                              key={`${channel.id}-${i}`}
+                              className="group relative bg-[#111111]/90 border border-white/5 cursor-pointer rounded-2xl overflow-hidden p-3.5 hover:border-indigo-500/40 hover:bg-black/50 hover:shadow-lg transition-all"
+                            >
+                              <div className="w-full flex items-center justify-center bg-black/50 rounded-xl h-24 mb-3 p-2">
+                                {channel.logo ? (
+                                  <img src={channel.logo} alt="" className="max-h-[70px] max-w-[80%] object-contain filter group-hover:brightness-110 duration-300" referrerPolicy="no-referrer" />
+                                ) : (
+                                  <Tv size={32} className="text-white/20" />
+                                )}
+                              </div>
+                              <div className="space-y-1">
+                                <span className="bg-white/5 text-white/50 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded block w-fit truncate max-w-full">
+                                  {channel.category}
+                                </span>
+                                <h4 className="text-white font-extrabold text-xs sm:text-sm truncate">
+                                  {highlightMatch(channel.name, query)}
+                                </h4>
+                                {currentProgram && (
+                                  <p className="text-[9px] text-white/40 truncate font-semibold">
+                                    {currentProgram}
+                                  </p>
+                                )}
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
                     ) : (
                       searchTab === 'channels' && (
-                        <div className="h-44 bg-white/[0.01] border border-white/5 border-dashed rounded-3xl flex flex-col items-center justify-center text-center p-6">
-                          <Tv size={28} className="text-white/15 mb-2" />
-                          <p className="text-white/40 text-xs font-extrabold uppercase tracking-widest">Aucune chaîne trouvée</p>
-                          <p className="text-white/20 text-[11px] mt-1">Essayez d'autres termes ou explorez d'autres catégories</p>
+                        <div className="h-56 bg-white/[0.01] border border-white/5 border-dashed rounded-[24px] flex flex-col items-center justify-center text-center p-6">
+                          <Tv size={32} className="text-white/10 mb-3" />
+                          <p className="text-white/40 text-xs font-black uppercase tracking-widest">Aucune chaîne TV trouvée</p>
+                          <p className="text-white/20 text-xs mt-1 max-w-sm">Désolé, aucune chaîne généraliste ou thématique ne correspond à votre recherche</p>
                         </div>
                       )
                     )}
@@ -539,7 +686,10 @@ export default function App() {
                         {filteredMovies.map((movie) => (
                           <motion.div
                             key={movie.id}
-                            onClick={() => setSearchDetailMovie(movie)}
+                            onClick={() => {
+                              setSearchDetailMovie(movie);
+                              addToSearchHistory(movie.title);
+                            }}
                             whileHover={{ y: -8, scale: 1.04 }}
                             transition={{ type: "spring", stiffness: 300, damping: 22 }}
                             className="relative aspect-[2/3] rounded-[22px] overflow-hidden cursor-pointer shadow-2xl border border-white/5 bg-neutral-900 group"
@@ -550,14 +700,16 @@ export default function App() {
                                 <span className="bg-indigo-600 text-white px-2 py-0.5 rounded font-black tracking-wider uppercase text-[8px]">{movie.quality}</span>
                                 <span className="text-white/50">{movie.year}</span>
                               </div>
-                              <h4 className="text-white font-black text-xs sm:text-sm line-clamp-1 group-hover:text-indigo-400 transition-colors">{movie.title}</h4>
+                              <h4 className="text-white font-black text-xs sm:text-sm line-clamp-1 group-hover:text-indigo-400 transition-colors">
+                                {highlightMatch(movie.title, query)}
+                              </h4>
                               <div className="flex items-center justify-between mt-1 opacity-100 transition-all">
                                 <div className="flex items-center gap-1">
                                   <Star size={10} className="text-yellow-500 fill-current" />
                                   <span className="text-[10px] font-black text-white/60">{movie.ratingImdb || 'N/A'}</span>
                                 </div>
                                 {movie.genres && movie.genres[0] && (
-                                  <span className="text-[9px] font-extrabold text-white/30 truncate max-w-[80px] uppercase tracking-wider">{movie.genres[0]}</span>
+                                  <span className="text-[9px] font-extrabold text-white/35 truncate max-w-[80px] uppercase tracking-wider">{movie.genres[0]}</span>
                                 )}
                               </div>
                             </div>
@@ -571,24 +723,76 @@ export default function App() {
                       </div>
                     ) : (
                       searchTab === 'movies' && (
-                        <div className="h-44 bg-white/[0.01] border border-white/5 border-dashed rounded-3xl flex flex-col items-center justify-center text-center p-6">
-                          <Film size={28} className="text-white/15 mb-2" />
-                          <p className="text-white/40 text-xs font-extrabold uppercase tracking-widest">Aucun film trouvé</p>
-                          <p className="text-white/20 text-[11px] mt-1">Recherchez d'après le réalisateur, l'année, le genre ou le titre</p>
+                        <div className="h-56 bg-white/[0.01] border border-white/5 border-dashed rounded-[24px] flex flex-col items-center justify-center text-center p-6">
+                          <Film size={32} className="text-white/10 mb-3" />
+                          <p className="text-white/40 text-xs font-black uppercase tracking-widest">Aucun film trouvé</p>
+                          <p className="text-white/20 text-xs mt-1 max-w-sm">Recherchez d'après le réalisateur, l'année, le genre, l'acteur principal ou le titre de l'oeuvre</p>
                         </div>
                       )
                     )}
                   </div>
                 )}
 
-                {filteredChannels.length === 0 && filteredMovies.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-64 text-center">
-                    <Search size={40} className="text-white/10 mb-3" />
-                    <h3 className="text-white/40 font-black text-sm uppercase tracking-wider">Aucun résultat trouvé</h3>
-                    <p className="text-white/20 text-xs mt-1 max-w-sm leading-relaxed">Veuillez vérifier l'orthographe ou explorer les catégories populaires ci-dessous.</p>
+                {/* 3. Adult channels results group (Only when unlocked) */}
+                {!searchParentalLocked && (searchTab === 'all' || searchTab === 'adults') && (
+                  <div className="space-y-4">
+                    {searchTab === 'all' && filteredAdultChannels.length > 0 && (
+                      <h3 className="text-xs font-black uppercase tracking-widest text-[#555] flex items-center gap-2 border-b border-white/5 pb-2">
+                        <span className="text-red-500">🔞</span>
+                        Espace Adulte Déverrouillé ({filteredAdultChannels.length})
+                      </h3>
+                    )}
+                    {filteredAdultChannels.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-3 md:gap-4 animate-fade-in animate-spring">
+                        {filteredAdultChannels.map((channel, i) => (
+                          <motion.div
+                            onClick={() => {
+                              handleSelectChannel(channel);
+                              addToSearchHistory(channel.name);
+                            }}
+                            whileHover={{ scale: 1.05 }}
+                            transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                            key={`adult-${channel.id}-${i}`}
+                            className="group relative bg-[#0c0909]/90 border border-red-500/20 cursor-pointer rounded-2xl overflow-hidden p-3.5 hover:border-red-500 hover:bg-black/50 hover:shadow-lg transition-all"
+                          >
+                            <div className="w-full flex items-center justify-center bg-black/65 rounded-xl h-24 mb-3 p-2 relative">
+                              <img src={channel.logo || "/logo-18.svg"} alt="" className="max-h-[70px] max-w-[80%] object-contain" referrerPolicy="no-referrer" />
+                              <div className="absolute top-1.5 right-1.5 bg-red-650 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">-18</div>
+                            </div>
+                            <div className="space-y-1 bg-transparent">
+                              <span className="bg-red-500/10 text-rose-400 border border-red-500/20 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded block w-fit truncate max-w-full">
+                                {channel.category || "🔞 Adulte"}
+                              </span>
+                              <h4 className="text-white font-black text-xs sm:text-sm truncate">
+                                {highlightMatch(channel.name, query)}
+                              </h4>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    ) : (
+                      searchTab === 'adults' && (
+                        <div className="h-56 bg-red-950/5 border border-red-500/10 border-dashed rounded-[24px] flex flex-col items-center justify-center text-center p-6">
+                          <span className="text-3xl mb-2">🔞</span>
+                          <p className="text-rose-400/60 text-xs font-black uppercase tracking-widest">Aucun flux adulte trouvé</p>
+                          <p className="text-white/20 text-xs mt-1 max-w-md">Essayez des mots-clés plus généraux comme "Pink", "Penthouse" ou "Ero"</p>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+
+                {/* Ultimate No Results Block */}
+                {filteredChannels.length === 0 && filteredMovies.length === 0 && filteredAdultChannels.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-72 text-center p-6 border border-white/5 rounded-3xl bg-white/[0.01]">
+                    <Search size={44} className="text-white/20 mb-3 animate-pulse" />
+                    <h3 className="text-white/50 font-black text-lg uppercase tracking-tight">Aucun résultat pour "{query}"</h3>
+                    <p className="text-white/25 text-xs mt-1.5 max-w-sm leading-relaxed">
+                      Nous n'avons trouvé aucun flux de télé en direct ni film qui ne concorde. Assurez-vous de l'orthographe ou essayez un genre populaire.
+                    </p>
                     <button 
                       onClick={() => setChannelsSearch('')}
-                      className="mt-4 px-4 py-2 bg-white/5 hover:bg-white/10 text-white/80 rounded-xl text-xs font-bold uppercase transition-all"
+                      className="mt-6 px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer"
                     >
                       Effacer la recherche
                     </button>
@@ -596,17 +800,56 @@ export default function App() {
                 )}
               </div>
             ) : (
-              <div className="space-y-10">
+              <div className="space-y-10 animate-fade-in">
+                 {/* Search History Sub-panel */}
+                 {searchHistory.length > 0 && (
+                   <div className="space-y-3">
+                     <div className="flex items-center justify-between text-white/30 text-xs uppercase tracking-widest font-black">
+                       <h3 className="flex items-center gap-1.5">
+                         <History size={13} /> Recherches Récentes
+                       </h3>
+                       <button 
+                         onClick={clearHistory}
+                         className="hover:text-red-400 font-extrabold flex items-center gap-1 transition-all cursor-pointer"
+                       >
+                         Effacer tout
+                       </button>
+                     </div>
+                     <div className="flex flex-wrap gap-2">
+                       {searchHistory.map((term, index) => (
+                         <div key={index} className="flex items-center bg-[#111] hover:bg-[#151515] text-white/60 hover:text-white rounded-xl border border-white/5 hover:border-white/10 transition-all font-bold text-xs truncate">
+                           <button 
+                             onClick={() => triggerSearchTag(term)}
+                             className="px-4 py-2 text-left cursor-pointer"
+                           >
+                             {term}
+                           </button>
+                           <button 
+                             onClick={() => setSearchHistory(prev => {
+                               const next = prev.filter(t => t !== term);
+                               localStorage.setItem('denden_search_history', JSON.stringify(next));
+                               return next;
+                             })}
+                             className="pr-3 pl-1 py-3 text-white/20 hover:text-red-400/80 transition-colors cursor-pointer"
+                           >
+                             <X size={12} />
+                           </button>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+                 )}
+
                  <div className="space-y-3">
-                   <h3 className="text-xs font-black uppercase text-white/30 tracking-[0.2em] flex items-center gap-1.5">
-                     <Sparkles size={13} className="text-indigo-500" /> Recherches d'actualité
+                   <h3 className="text-xs font-black uppercase text-white/20 tracking-[0.2em] flex items-center gap-1.5">
+                     <Sparkles size={13} className="text-indigo-500" /> Tendances & Recherches d'Actualité
                    </h3>
                    <div className="flex flex-wrap gap-2">
                      {["TF1", "M6", "Canal+", "France 2", "Inception", "Interstellar", "Action", "Sport"].map(word => (
                        <button
                          key={word}
-                         onClick={() => setChannelsSearch(word)}
-                         className="px-4 py-2.5 bg-[#141414] hover:bg-[#1c1c1c] text-white/70 hover:text-white text-xs font-extrabold rounded-xl border border-white/5 hover:border-white/10 transition-all uppercase tracking-wide cursor-pointer"
+                         onClick={() => triggerSearchTag(word)}
+                         className="px-4 py-2.5 bg-[#111111] hover:bg-[#161616] hover:border-indigo-500/40 text-white/70 hover:text-white text-xs font-extrabold rounded-xl border border-white/5 transition-all uppercase tracking-wide cursor-pointer"
                        >
                          {word}
                        </button>
@@ -616,20 +859,20 @@ export default function App() {
 
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-4">
-                      <h3 className="text-xs font-black uppercase text-white/30 tracking-[0.2em] flex items-center gap-1.5">
-                        <Tv size={13} /> Catégories Direct TV
+                      <h3 className="text-xs font-black uppercase text-white/25 tracking-[0.2em] flex items-center gap-1.5">
+                        <Tv size={13} /> Parcourir par Catégories Direct
                       </h3>
                       <div className="grid grid-cols-2 gap-3">
                         {channelCategories.slice(0, 8).map(category => (
                           <button 
                             key={category} 
                             onClick={() => {
-                              setChannelsSearch(category);
+                              triggerSearchTag(category);
                               setSearchTab('channels');
                             }} 
-                            className="p-4 bg-[#111] hover:bg-[#151515] hover:border-red-650/35 border border-white/5 rounded-2xl text-left transition-all group cursor-pointer"
+                            className="p-4 bg-[#111] hover:bg-[#141414] hover:border-indigo-500/45 border border-white/5 rounded-2xl text-left transition-all group cursor-pointer"
                           >
-                            <h4 className="text-white/80 font-bold uppercase tracking-wider text-xs truncate group-hover:text-red-500 transition-colors">{category}</h4>
+                            <h4 className="text-white/80 font-bold uppercase tracking-wider text-xs truncate group-hover:text-indigo-400 transition-colors">{category}</h4>
                             <span className="text-white/30 text-[10px] mt-0.5 block">{channels.filter(c => c.category === category).length} chaînes</span>
                           </button>
                         ))}
@@ -637,8 +880,8 @@ export default function App() {
                     </div>
 
                     <div className="space-y-4">
-                      <h3 className="text-xs font-black uppercase text-white/30 tracking-[0.2em] flex items-center gap-1.5">
-                        <Film size={13} /> Genres VOD / Cinéma
+                      <h3 className="text-xs font-black uppercase text-white/25 tracking-[0.2em] flex items-center gap-1.5">
+                        <Film size={13} /> Parcourir par Genres de Cinéma
                       </h3>
                       {movieGenres.length > 0 ? (
                         <div className="grid grid-cols-2 gap-3">
@@ -646,13 +889,13 @@ export default function App() {
                             <button 
                               key={genre} 
                               onClick={() => {
-                                setChannelsSearch(genre);
+                                triggerSearchTag(genre);
                                 setSearchTab('movies');
                               }} 
-                              className="p-4 bg-[#111] hover:bg-[#151515] hover:border-red-650/35 border border-white/5 rounded-2xl text-left transition-all group cursor-pointer"
+                              className="p-4 bg-[#111] hover:bg-[#141414] hover:border-indigo-500/45 border border-white/5 rounded-2xl text-left transition-all group cursor-pointer"
                             >
-                              <h4 className="text-white/80 font-bold uppercase tracking-wider text-xs truncate group-hover:text-red-500 transition-colors">{genre}</h4>
-                              <span className="text-white/30 text-[10px] mt-0.5 block">{movies.filter(m => m.genres && m.genres.includes(genre)).length} films</span>
+                              <h4 className="text-white/80 font-bold uppercase tracking-wider text-xs truncate group-hover:text-indigo-400 transition-colors">{genre}</h4>
+                              <span className="text-white/30 text-[10px] mt-0.5 block">{movies.filter(m => m.genres && Array.isArray(m.genres) && m.genres.includes(genre)).length} films</span>
                             </button>
                           ))}
                         </div>
@@ -665,6 +908,7 @@ export default function App() {
                  </div>
               </div>
             )}
+
           </div>
         );
       }
@@ -742,7 +986,7 @@ export default function App() {
 
   return (
     <div className={cn(
-      "flex h-screen bg-[#090e17] overflow-hidden font-sans selection:bg-[#00A8E1]/30",
+      "flex h-[100dvh] bg-[#090e17] overflow-hidden font-sans selection:bg-[#00A8E1]/30 pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]",
       deviceType === 'mobile' ? "flex-col" : "flex-row"
     )}>
       <Toaster theme="dark" position="top-center" />
@@ -751,6 +995,7 @@ export default function App() {
         onSectionChange={handleSectionChange}
         deviceType={deviceType}
         isPrivateUnlocked={isPrivateUnlocked}
+        onLockPrivate={handleLockPrivate}
       />
       
       <main className="flex-1 overflow-y-auto p-2 md:p-4 lg:p-8 scrollbar-hide scroll-smooth relative">
@@ -787,8 +1032,12 @@ export default function App() {
               className="w-full max-w-lg bg-[#111] border-t sm:border border-white/10 rounded-t-[32px] sm:rounded-[32px] overflow-hidden relative z-10 shadow-2xl"
             >
               <div className="p-8 border-b border-white/10 flex items-center gap-6">
-                <div className="w-16 h-16 bg-black border border-white/10 rounded-2xl p-2 shrink-0">
-                  <img src={showChannelActions.channel.logo || undefined} alt="" className="w-full h-full object-contain" />
+                <div className="w-16 h-16 bg-black border border-white/10 rounded-2xl p-2 shrink-0 flex items-center justify-center">
+                  {showChannelActions.channel.logo ? (
+                    <img src={showChannelActions.channel.logo} alt="" className="w-full h-full object-contain" />
+                  ) : (
+                    <Tv size={24} className="text-white/30" />
+                  )}
                 </div>
                 <div>
                   <h3 className="text-xl font-black text-white uppercase tracking-tight">{showChannelActions.channel.name}</h3>
@@ -963,7 +1212,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  {searchDetailMovie.actors && searchDetailMovie.actors.length > 0 && (
+                  {searchDetailMovie.actors && Array.isArray(searchDetailMovie.actors) && searchDetailMovie.actors.length > 0 && (
                     <div className="space-y-2">
                       <h3 className="text-xs font-black uppercase text-white/40 tracking-[0.2em] flex items-center gap-1.5">
                         <Users size={12} /> Distribution / Casting
@@ -1009,7 +1258,7 @@ export default function App() {
                   </div>
 
                   {/* Genres card list */}
-                  {searchDetailMovie.genres && searchDetailMovie.genres.length > 0 && (
+                  {searchDetailMovie.genres && Array.isArray(searchDetailMovie.genres) && searchDetailMovie.genres.length > 0 && (
                     <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 space-y-3">
                       <h4 className="text-[10px] uppercase font-black tracking-widest text-[#555]">Genres associés</h4>
                       <div className="flex flex-wrap gap-1.5">
@@ -1039,7 +1288,7 @@ export default function App() {
             zIndex: isFullScreenMoviePlayer ? 80 : -10
           }}
           transition={{ duration: 0.3 }}
-          className={cn("fixed inset-0 bg-black", !isFullScreenMoviePlayer && "overflow-hidden")}
+          className={cn("fixed inset-0 bg-black pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]", !isFullScreenMoviePlayer && "overflow-hidden")}
         >
           <MoviePlayer 
             movie={selectedMovieForPlayer} 
@@ -1066,7 +1315,7 @@ export default function App() {
             zIndex: isFullScreenPlayer ? 80 : -10
           }}
           transition={{ duration: 0.3 }}
-          className={cn("fixed inset-0 bg-black", !isFullScreenPlayer && "overflow-hidden")}
+          className={cn("fixed inset-0 bg-black pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]", !isFullScreenPlayer && "overflow-hidden")}
         >
           <VideoPlayer 
             channel={selectedChannel} 
@@ -1086,6 +1335,7 @@ export default function App() {
             onPrevChannel={handlePrevChannel}
             channels={channels}
             onSelectChannel={handleSelectChannel}
+            onLockPrivate={handleLockPrivate}
           />
         </motion.div>
       )}

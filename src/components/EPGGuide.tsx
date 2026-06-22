@@ -18,9 +18,7 @@ export default function EPGGuide({ channels }: EPGGuideProps) {
   const deviceType = useDeviceType();
   const isMobile = deviceType === 'mobile' || deviceType === 'tablet';
   
-  const hourWidth = isMobile ? 200 : 260; // Slightly narrower on mobile for better fit
   const totalHours = 12; // Display 12 hours timeline segments
-  const hours = Array.from({ length: totalHours }, (_, i) => addHours(timelineStart, i));
   const timelineEnd = addHours(timelineStart, totalHours);
 
   const fetchEPG = async () => {
@@ -61,7 +59,26 @@ export default function EPGGuide({ channels }: EPGGuideProps) {
         description: "Programmes TV en direct mis à jour en continu"
       }];
     }
-    return visibleProgs;
+    
+    // Sort and deduplicate overlapping times
+    const sortedProgs = visibleProgs.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    const dedupedProgs = [];
+    let lastEnd = 0;
+    for (const p of sortedProgs) {
+      const start = new Date(p.startTime).getTime();
+      const end = new Date(p.endTime).getTime();
+      
+      let pCopy = { ...p };
+      if (start < lastEnd + 1000) {
+        // Overlapping with previous program, fast forward its start time or skip
+        if (end <= lastEnd + 1000) continue;
+        pCopy.startTime = new Date(lastEnd).toISOString();
+      }
+      dedupedProgs.push(pCopy);
+      lastEnd = new Date(pCopy.endTime).getTime();
+    }
+    
+    return dedupedProgs;
   };
 
   const now = new Date();
@@ -109,123 +126,94 @@ export default function EPGGuide({ channels }: EPGGuideProps) {
         </div>
       </div>
 
-      {/* Main EPG Table Box */}
-      <div className={cn("bg-[#111] border border-white/10 overflow-hidden flex flex-col shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative", isMobile ? "rounded-[24px] h-[75vh]" : "rounded-[48px] h-[70vh]")}>
-        
-        {/* Horizontal scroll container serving the entire timeline */}
-        <div className="flex-1 overflow-auto custom-scrollbar flex flex-col relative">
+      {/* Main EPG List View */}
+      <div className="flex-1 flex flex-col gap-4 md:gap-6 mt-4 md:mt-8">
+        {channels.map((channel, i) => {
+          const livePrograms = getTimelineProgs(channel.id);
+          if (livePrograms.length === 0) return null;
           
-          {/* Header Row: Channel Info and Hour marks */}
-          <div className="flex bg-white/[0.02] border-b border-white/5 sticky top-0 z-30 flex-shrink-0">
-            {/* Hour Block Header Title */}
-            <div className={cn("flex-shrink-0 font-black text-white bg-[#0a0a0a] border-r border-white/5 uppercase tracking-widest flex items-center gap-2 sticky left-0 z-40 shadow-[4px_0_15px_rgba(0,0,0,0.5)]", isMobile ? "w-24 p-2 text-[9px]" : "w-52 md:w-60 p-4 text-xs")}>
-              <Clock size={isMobile ? 12 : 14} className="text-indigo-500" /> {!isMobile && "Chaînes"}
-            </div>
-            
-            {/* Timeline hour coordinates mapping */}
-            <div className="flex flex-1" style={{ width: totalHours * hourWidth }}>
-              {hours.map((hour) => (
-                <div 
-                  key={hour.toISOString()} 
-                  className="flex-shrink-0 border-r border-white/5 text-white/50 font-black text-xs uppercase tracking-widest flex items-center justify-center font-mono"
-                  style={{ width: hourWidth }}
-                >
-                  <span className="bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">{format(hour, 'HH:mm')}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Rows corresponding to the Channels with programs */}
-          <div className="flex-1 flex flex-col">
-            {channels.map((channel, i) => {
-              const livePrograms = getTimelineProgs(channel.id);
+          return (
+            <div key={`${channel.id}-${i}`} className="flex flex-col lg:flex-row gap-4 md:gap-6 bg-[#050505] border border-white/5 rounded-[24px] md:rounded-[32px] p-4 md:p-6 shadow-2xl relative overflow-hidden group">
+              {/* Subtle background glow */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none group-hover:bg-indigo-500/10 transition-colors duration-700" />
               
-              return (
-                <div key={`${channel.id}-${i}`} className={cn("flex border-b border-white/5 hover:bg-white/[0.01] transition-colors relative flex-shrink-0 group", isMobile ? "h-20" : "h-24")}>
-                  
-                  {/* Sticky left panel for Channel logo/info */}
-                  <div className={cn("flex-shrink-0 border-r border-white/5 bg-[#0a0a0a] flex items-center gap-2 md:gap-4 sticky left-0 z-20 shadow-[4px_0_15px_rgba(0,0,0,0.5)]", isMobile ? "w-24 p-2" : "w-52 md:w-60 p-4")}>
-                    <div className={cn("bg-white/5 rounded-xl border border-white/5 flex items-center justify-center overflow-hidden flex-shrink-0 transition-all group-hover:scale-105 active:scale-95 cursor-pointer", isMobile ? "w-10 h-10 p-1" : "w-12 h-12 p-1.5")}>
-                      <img src={channel.logo || undefined} alt="" className="h-full w-full object-contain" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <span className={cn("text-white font-black block tracking-tight line-clamp-2 leading-tight", isMobile ? "text-[11px]" : "text-sm truncate")}>{channel.name}</span>
-                      {!isMobile && <span className="text-white/40 text-[10px] font-bold block uppercase tracking-widest mt-0.5">{channel.category}</span>}
-                    </div>
-                  </div>
-
-                  {/* Horizontal strip displaying the current channel schedule in timeline */}
-                  <div className="flex-1 relative h-full bg-[#111]/30 scrollbar-hide" style={{ width: totalHours * hourWidth }}>
-                    {livePrograms.map((p, idx) => {
-                      const pStart = new Date(p.startTime);
-                      const pEnd = new Date(p.endTime);
-                      
-                      const startOffset = Math.max(0, differenceInMinutes(pStart, timelineStart));
-                      const left = (startOffset / 60) * hourWidth;
-                      
-                      const effectiveStart = isBefore(pStart, timelineStart) ? timelineStart : pStart;
-                      const effectiveEnd = isAfter(pEnd, timelineEnd) ? timelineEnd : pEnd;
-                      const duration = Math.max(15, differenceInMinutes(effectiveEnd, effectiveStart));
-                      const width = (duration / 60) * hourWidth;
-
-                      const isLive = now >= pStart && now <= pEnd;
-
-                      return (
-                        <div 
-                          key={`${p.id || 'prog'}-${p.startTime}-${idx}`}
-                          style={{ left: `${left}px`, width: `${width}px` }} 
-                          className={cn(
-                            "absolute top-1/2 -translate-y-1/2 rounded-2xl flex flex-col justify-between transition-all select-none overflow-hidden duration-300",
-                            isMobile ? "h-[85%] border p-2" : "h-[80%] border p-3",
-                            isLive 
-                              ? "bg-indigo-500/10 border-indigo-500/30 shadow-[inset_0_0_15px_rgba(99,102,241,0.1)] group-hover:bg-indigo-500/15" 
-                              : "bg-white/[0.02] border-white/5 group-hover:bg-white/[0.04]"
-                          )}
-                        >
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5 flex-nowrap">
-                              {isLive && (
-                                <span className="flex h-2 w-2 relative shrink-0">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-500 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-                                </span>
-                              )}
-                              <h5 className={cn(
-                                "font-black truncate tracking-tight transition-colors",
-                                isMobile ? "text-[12px]" : "text-xs",
-                                isLive ? "text-indigo-400" : "text-white/80"
-                              )}>
-                                {p.title}
-                              </h5>
-                            </div>
-                            {p.description && !isMobile && (
-                              <p className="text-white/30 text-[10px] font-medium truncate mt-0.5">{p.description}</p>
-                            )}
-                          </div>
-                          
-                          <div className={cn("flex items-center justify-between font-bold tracking-wider font-mono", isMobile ? "text-[10px]" : "text-[9px]")}>
-                            <span className={isLive ? "text-indigo-400/80" : "text-white/30"}>
-                              {format(pStart, 'HH:mm')} - {format(pEnd, 'HH:mm')}
-                            </span>
-                            {isLive && (
-                              <span className={cn("bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded font-black uppercase tracking-widest origin-right", isMobile ? "px-1.5 py-0.5 text-[8px]" : "px-1.5 py-0.5 text-[8px]")}>
-                                Direct
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  
+              {/* Left panel for Channel logo/info */}
+              <div className="flex lg:flex-col items-center lg:items-start gap-4 lg:w-48 shrink-0 border-b lg:border-b-0 lg:border-r border-white/10 pb-4 lg:pb-0 lg:pr-6 relative z-10">
+                <div className={cn("bg-white/5 backdrop-blur-md rounded-[16px] md:rounded-[20px] flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner border border-white/5", isMobile ? "w-14 h-14 p-2" : "w-20 h-20 p-3")}>
+                  {channel.logo ? (
+                    <img src={channel.logo} alt="" className="h-full w-full object-contain filter drop-shadow-xl" />
+                  ) : (
+                    <Tv size={24} className="text-white/40" />
+                  )}
                 </div>
-              );
-            })}
-          </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-white font-black text-lg md:text-xl block truncate leading-tight drop-shadow-md">{channel.name}</span>
+                  <span className="text-white/40 font-bold uppercase text-[9px] md:text-[10px] tracking-[0.2em] mt-1 block">{channel.category || 'Généraliste'}</span>
+                </div>
+              </div>
 
-        </div>
+              {/* Vertical list of programs */}
+              <div className="flex-1 flex flex-col gap-2 relative z-10">
+                {livePrograms.map((p, idx) => {
+                  const pStart = new Date(p.startTime);
+                  const pEnd = new Date(p.endTime);
+                  const isLive = now >= pStart && now <= pEnd;
 
+                  return (
+                    <div 
+                       key={`${p.id || 'prog'}-${p.startTime}-${idx}`}
+                       className={cn(
+                         "flex items-center gap-3 md:gap-5 rounded-[12px] md:rounded-[16px] p-3 md:p-4 transition-all relative overflow-hidden",
+                         isLive 
+                           ? "bg-indigo-600/10 border border-indigo-500/20 shadow-[0_0_20px_rgba(99,102,241,0.05)]" 
+                           : "bg-white/[0.02] border border-white/5 hover:bg-white/[0.04]"
+                       )}
+                     >
+                       {isLive && (
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-400 to-indigo-600 shadow-[0_0_15px_rgba(99,102,241,0.8)]" />
+                       )}
+                       <div className="w-12 md:w-16 text-center shrink-0">
+                          <div className={cn("font-mono text-xs md:text-sm font-bold tracking-wider", isLive ? "text-indigo-400" : "text-white/50")}>
+                            {format(pStart, 'HH:mm')}
+                          </div>
+                          {!isMobile && !isLive && (
+                             <div className="text-white/20 font-mono text-[9px] uppercase tracking-widest mt-1">
+                               {format(pEnd, 'HH:mm')}
+                             </div>
+                          )}
+                       </div>
+                       
+                       {p.icon && !isMobile && (
+                          <div className="hidden sm:block w-24 h-16 shrink-0 rounded-lg overflow-hidden relative shadow-md">
+                            <img src={p.icon} alt="" className="w-full h-full object-cover filter brightness-[0.8]" referrerPolicy="no-referrer" />
+                          </div>
+                       )}
+
+                       <div className="flex-1 min-w-0">
+                           <div className="flex items-center gap-3 flex-wrap">
+                             {isLive && (
+                               <span className="bg-red-650 text-white text-[8px] md:text-[9px] uppercase px-2 py-0.5 rounded-md font-black tracking-widest flex items-center gap-1.5 shadow-md shadow-red-650/40">
+                                 <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                 DIRECT
+                               </span>
+                             )}
+                             <h4 className={cn("font-bold truncate font-sans", isLive ? "text-white text-base md:text-lg" : "text-white/80 text-sm md:text-base")}>{p.title}</h4>
+                           </div>
+                           {p.description && (
+                             <p className={cn("line-clamp-1 md:line-clamp-2 mt-1", isLive ? "text-white/60 text-xs md:text-sm" : "text-white/40 text-[10px] md:text-xs")}>{p.description}</p>
+                           )}
+                       </div>
+                       <button className={cn("w-8 h-8 rounded-full border flex items-center justify-center shrink-0 transition-all", isLive ? "bg-indigo-500/20 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500 hover:text-white" : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white")}>
+                         <Info size={14} />
+                       </button>
+                     </div>
+                  );
+                })}
+              </div>
+              
+            </div>
+          );
+        })}
       </div>
     </div>
   );

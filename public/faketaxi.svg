@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 120" width="100%" height="100%">
+  <!-- Custom Fake Taxi Stylized Vector Logo -->
+  <g transform="skewX(-11) translate(25, 10)">
+    <!-- FAKE text with thick black outline -->
+    <text x="10" y="86" font-family="'Impact', 'Arial Black', Arial, sans-serif" font-size="88" font-weight="900" fill="#F4C430" stroke="#111111" stroke-width="12" stroke-linejoin="round" letter-spacing="-5">FAKE</text>
+    <text x="10" y="86" font-family="'Impact', 'Arial Black', Arial, sans-serif" font-size="88" font-weight="900" fill="#FFD700" letter-spacing="-5">FAKE</text>
+    
+    <!-- TAXI block container -->
+    <g transform="translate(255, 12)">
+      <!-- Outer black border of the yellow sticker -->
+      <rect x="-3" y="-3" width="236" height="90" rx="16" fill="#111111" />
+      <!-- Yellow sticker body -->
+      <rect x="0" y="0" width="230" height="84" rx="14" fill="#FFD700" />
+      <!-- Black inner container -->
+      <rect x="10" y="10" width="210" height="64" rx="10" fill="#111111" />
+      <!-- TAXI Text inside the dark container -->
+      <text x="115" y="58" font-family="'Impact', 'Arial Black', Arial, sans-serif" font-size="56" font-weight="900" fill="#FFD700" text-anchor="middle" letter-spacing="-1">TAXI</text>
+    </g>
+  </g>
+</svg>

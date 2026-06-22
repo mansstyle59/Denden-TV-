@@ -1,6 +1,5 @@
 import React from 'react';
-import { motion } from 'motion/react';
-import { Star, PlayCircle } from 'lucide-react';
+import { Star, PlayCircle, Tv } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Channel } from '../types';
 import { DeviceType } from '../hooks/useDeviceType';
@@ -24,116 +23,78 @@ export default function ChannelGrid({ channels, onChannelSelect, onChannelLongPr
     );
   }
 
-  const gridCols = {
-    mobile: "grid-cols-2 gap-3",
-    tablet: "grid-cols-3 gap-4",
-    desktop: "grid-cols-5 gap-6",
-    tv: "grid-cols-6 lg:grid-cols-8 gap-6"
-  };
-
   const isMobile = deviceType === 'mobile';
 
   return (
-    <div className={cn("grid", gridCols[deviceType])}>
+    <div className={cn(
+      "grid w-full gap-3 md:gap-4",
+      "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10"
+    )}>
       {channels.map((channel, i) => {
         const epg = liveEpg?.[channel.id];
-        const currentProgram = epg?.programmeTv?.title || epg?.current?.title;
+        const currentProgram = epg?.programmeTv?.title || epg?.current?.title?.[0]?.value || "";
         const progress = epg?.programmeTv?.progress || 0;
+        const progImage = epg?.programmeTv?.image || null;
 
         return (
-          <motion.div
-            key={`${channel.id}-${i}`}
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: Math.min(i * 0.02, 0.4), duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          >
+          <div key={`${channel.id}-${i}`}>
             <ChannelCardWrapper
               channel={channel}
               onClick={onChannelSelect}
               onLongPress={onChannelLongPress}
               className={cn(
-                "group relative bg-[#111111] border-2 border-white/5 cursor-pointer shadow-2xl overflow-hidden transition-all duration-500 hover:border-red-650 focus-within:border-red-650 hover:bg-[#151515] hover:shadow-[0_25px_50px_rgba(229,9,20,0.25)] rounded-[18px]",
-                isMobile ? "p-3" : "p-4"
+                "group relative bg-[#111111] border border-white/5 cursor-pointer rounded-xl md:rounded-[20px] overflow-hidden flex flex-col aspect-[4/3] transition-all duration-500",
+                "focus:border-red-650 focus:shadow-[0_10px_30px_rgba(220,38,38,0.2)] hover:border-red-650 hover:shadow-[0_10px_30px_rgba(220,38,38,0.2)]"
               )}
             >
-              {/* Card Background Glow */}
-              <div className="absolute inset-0 bg-gradient-to-br from-red-650/0 to-transparent group-hover:from-red-650/10 transition-all duration-700 pointer-events-none" />
-              
-              <div className={cn(
-                "w-full flex items-center justify-center relative overflow-hidden transition-all duration-500 bg-black/40 rounded-xl",
-                isMobile ? "h-24 mb-3" : "h-32 mb-4 group-hover:scale-110"
-              )}>
-                <img 
-                  src={channel.logo || undefined} 
-                  alt={channel.name} 
-                  className={cn(
-                    "object-contain relative z-10 transition-transform duration-700 group-hover:scale-110 filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.8)]",
-                    isMobile ? "max-h-[70px] max-w-[90%]" : "max-h-[100px] max-w-[90%]"
-                  )}
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                />
-                
-                {/* Subtle backlight glow */}
-                <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-2xl" />
-              </div>
-              
-              <div className="relative z-10 space-y-2">
-                <div className="flex items-center gap-2">
-                   <div className="flex items-center gap-1.5 bg-red-650 px-2 py-0.5 rounded-lg text-[7px] font-black text-white uppercase tracking-widest shadow-lg">
-                       <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
-                       EN DIRECT
-                    </div>
-                   <span className={cn(
-                    "font-black uppercase tracking-[0.2em] text-white/20 group-hover:text-red-650/40 transition-colors shrink-0", 
-                    isMobile ? "text-[6px]" : "text-[8px]"
-                  )}>
-                    CH {channels.indexOf(channel) + 1}
-                  </span>
-                </div>
-
-                <div className="space-y-1">
-                  <h4 className={cn(
-                    "text-white font-black uppercase tracking-tight line-clamp-1 transition-colors leading-none", 
-                    isMobile ? "text-[10px]" : "text-[13px]",
-                    "group-hover:text-white"
-                  )}>
-                    {channel.name}
-                  </h4>
-                  
-                  {currentProgram && !isMobile && (
-                    <p className="text-[9px] text-white/40 truncate font-black uppercase tracking-widest leading-none">
-                      {currentProgram}
-                    </p>
-                  )}
-                </div>
-                
-                {progress > 0 && (
-                  <div className={cn("w-full bg-white/5 rounded-full overflow-hidden shrink-0", isMobile ? "h-[3px] mt-1.5" : "h-1.5 mt-2")}>
-                    <div 
-                      className="h-full bg-red-650 transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(229,9,20,0.6)]" 
-                      style={{ width: `${progress}%` }} 
-                    />
+              {/* Image Container */}
+              <div className="absolute inset-0 flex items-center justify-center p-0 group-hover:scale-105 transition-transform duration-700 bg-[#0f0f0f]">
+                {progImage ? (
+                  <>
+                    <img src={progImage} className="absolute inset-0 w-full h-full object-cover filter brightness-[0.7] group-hover:brightness-100 transition-all duration-700" alt="" referrerPolicy="no-referrer" />
+                    <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10" />
+                    {channel.logo && (
+                      <img src={channel.logo} alt="" className="absolute left-2.5 top-2.5 h-6 md:h-8 max-w-[40%] object-contain filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] z-20" referrerPolicy="no-referrer" />
+                    )}
+                  </>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center p-6 bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a]">
+                    {channel.logo ? (
+                      <img
+                        src={channel.logo}
+                        alt={channel.name}
+                        className="w-full h-full object-contain relative z-20 filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)] opacity-80 group-hover:opacity-100 transition-opacity"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center relative z-20 opacity-30 group-hover:opacity-60 transition-opacity">
+                        <Tv className={cn("text-white mb-2", isMobile ? "w-6 h-6" : "w-10 h-10")} />
+                        <span className="text-white/40 font-black uppercase tracking-widest text-center truncate px-2 text-[10px] w-full">{channel.name}</span>
+                      </div>
+                    )}
                   </div>
                 )}
+              </div>
 
-                <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-white/5">
-                  <span className={cn(
-                    "font-black uppercase tracking-[0.3em] truncate text-white/20", 
-                    isMobile ? "text-[6px]" : "text-[8px]"
-                  )}>
-                    {channel.category}
-                  </span>
-                  <div className={cn(
-                    "rounded-full",
-                    isMobile ? "w-1 h-1" : "w-1.5 h-1.5",
-                    channel.status === 'online' || !channel.status ? "bg-emerald-500" : 
-                    channel.status === 'slow' ? "bg-amber-500" : "bg-rose-500"
-                  )} />
+              {/* Progress Bar inside image */}
+              {progress > 0 && (
+                <div className="absolute inset-x-0 bottom-0 h-1 bg-white/10 z-20">
+                  <div className="bg-red-600 h-full shadow-[0_0_10px_rgba(220,38,38,0.8)] transition-all duration-500" style={{ width: `${progress}%` }} />
                 </div>
+              )}
+
+              {/* Title Overlay */}
+              <div className="absolute inset-x-0 bottom-0 p-3 md:p-4 z-30 transform translate-y-2 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col justify-end h-1/2">
+                <h4 className="text-white font-black uppercase tracking-tight text-[10px] md:text-sm line-clamp-1 italic text-shadow-sm mb-0.5">
+                  {channel.name}
+                </h4>
+                {currentProgram && (
+                   <p className="text-white/60 text-[9px] md:text-[11px] font-medium truncate">{currentProgram}</p>
+                )}
               </div>
             </ChannelCardWrapper>
-          </motion.div>
+          </div>
         );
       })}
     </div>

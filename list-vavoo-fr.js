@@ -80,7 +80,12 @@ async function run() {
       for (const item of items) {
         if (item.type === 'iptv' && item.url) {
           const grp = String(item.group || '').toLowerCase();
-          if (grp.includes('france') || grp.includes('french')) {
+          const name = String(item.name || '').toLowerCase();
+          if (
+            grp.includes('france') || grp.includes('french') || 
+            grp.includes('belg') || grp.includes('swit') || grp.includes('ch ') ||
+            name.includes('be ciné') || name.includes('be cine') || name.includes('betv') || name.includes('be 1')
+          ) {
             vavooChannels.push(item);
           }
         }
@@ -103,19 +108,31 @@ async function run() {
     console.log('\n--- Sample Vavoo French Channel Names ---');
     const sortedNames = Array.from(uniqueNames).sort();
     
-    // Let's filter names containing "C8", "equipe", "cherie", "news", "lci"
-    const searchTerms = ['ocs'];
+    // Let's filter names containing "be" but exclude bein, berbere, bet, beyblade
     const filtered = sortedNames.filter(name => {
       const n = name.toLowerCase();
-      return searchTerms.some(t => n.includes(t));
+      if (!n.includes('be')) return false;
+      if (n.includes('bein')) return false;
+      if (n.includes('berber')) return false;
+      if (n.includes('bet')) return false;
+      if (n.includes('beyblade')) return false;
+      return true;
     });
     
-    console.log(`Found ${filtered.length} matching terms.`);
+    console.log(`Found ${filtered.length} interesting "be" terms:`, filtered);
     
-    // Find URLs corresponding to ocs
-    const ocsItems = vavooChannels.filter(item => item.name.toLowerCase().includes('ocs'));
-    ocsItems.forEach((item, idx) => {
-        console.log(`[${idx}] ${item.name}: ${item.url}`);
+    // Find URLs corresponding to interesting terms
+    const matchedItems = vavooChannels.filter(item => {
+      const n = item.name.toLowerCase();
+      if (!n.includes('be')) return false;
+      if (n.includes('bein')) return false;
+      if (n.includes('berber')) return false;
+      if (n.includes('bet')) return false;
+      if (n.includes('beyblade')) return false;
+      return true;
+    });
+    matchedItems.forEach((item, idx) => {
+        console.log(`[${idx}] ${item.name} (${item.group}): ${item.url}`);
     });
 
   } catch(e) {

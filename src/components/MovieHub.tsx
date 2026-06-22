@@ -77,12 +77,12 @@ export default function MovieHub({
   const filteredMovies = useMemo(() => {
     return sortedMovies.filter(m => {
       const matchesSearch = searchQuery.trim() === "" || 
-        m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (m.genres && m.genres.some(g => g.toLowerCase().includes(searchQuery.toLowerCase()))) ||
-        (m.director && m.director.toLowerCase().includes(searchQuery.toLowerCase()));
+        (m.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (m.genres && Array.isArray(m.genres) && m.genres.some(g => (g || '').toLowerCase().includes(searchQuery.toLowerCase()))) ||
+        (m.director && (m.director || '').toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchesGenre = selectedGenre === "Tous" || 
-        (m.genres && m.genres.some(g => g.toLowerCase() === selectedGenre.toLowerCase()));
+        (m.genres && Array.isArray(m.genres) && m.genres.some(g => (g || '').toLowerCase() === selectedGenre.toLowerCase()));
 
       return matchesSearch && matchesGenre;
     });
@@ -487,6 +487,13 @@ export default function MovieHub({
                     >
                       <Play size={14} fill="currentColor" /> Regarder maintenant
                     </button>
+                    <button 
+                      className="flex-1 md:flex-none bg-white/5 hover:bg-white/10 border border-white/10 text-white px-6 py-3 rounded-full font-black flex items-center justify-center gap-3 transition-all active:scale-95 text-[10px] uppercase tracking-widest"
+                      onClick={() => alert("Signalement envoyé à l'administrateur concernant la source du film.")}
+                      id="report-movie-btn"
+                    >
+                      Reporter un problème
+                    </button>
                   </div>
                 </div>
               </div>
@@ -529,7 +536,7 @@ export default function MovieHub({
                     </div>
 
                     {/* Dynamic Cast Cards */}
-                    {selectedMovie.actors && selectedMovie.actors.length > 0 && (
+                    {selectedMovie.actors && Array.isArray(selectedMovie.actors) && selectedMovie.actors.length > 0 && (
                       <div className="space-y-4">
                         <h3 className="text-xs font-black uppercase text-white/40 tracking-[0.2em]">Casting Principal</h3>
                         <div className="flex flex-wrap gap-2.5">
@@ -587,7 +594,7 @@ export default function MovieHub({
                     </div>
 
                     {/* Genres tag list */}
-                    {selectedMovie.genres && selectedMovie.genres.length > 0 && (
+                    {selectedMovie.genres && Array.isArray(selectedMovie.genres) && selectedMovie.genres.length > 0 && (
                       <div className="space-y-3">
                         <h3 className="text-xs font-black uppercase text-white/40 tracking-[0.2em]">Genres associés</h3>
                         <div className="flex flex-wrap gap-2">

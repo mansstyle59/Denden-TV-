@@ -603,7 +603,7 @@ export default function MovieSettings({
                           </button>
                         </div>
                         <div className="flex flex-wrap gap-1.5 p-2 bg-black/30 border border-white/5 rounded-xl min-h-[50px]">
-                          {(editingMovie.genres || []).map((genre) => (
+                          {(Array.isArray(editingMovie.genres) ? editingMovie.genres : []).map((genre) => (
                             <span key={genre} className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1.5 animate-fade-in">
                               {genre}
                               <button type="button" onClick={() => handleRemoveGenre(genre)} className="hover:text-red-500 text-white/40 text-[9px] font-black">✕</button>
@@ -635,7 +635,7 @@ export default function MovieSettings({
                           </button>
                         </div>
                         <div className="flex flex-wrap gap-1.5 p-2 bg-black/30 border border-white/5 rounded-xl min-h-[50px]">
-                          {(editingMovie.actors || []).map((actor) => (
+                          {(Array.isArray(editingMovie.actors) ? editingMovie.actors : []).map((actor) => (
                             <span key={actor} className="bg-white/5 text-white/80 border border-white/10 px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-1.5">
                               {actor}
                               <button type="button" onClick={() => handleRemoveActor(actor)} className="hover:text-red-500 text-white/40 text-[9px]">✕</button>

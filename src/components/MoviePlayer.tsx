@@ -127,18 +127,25 @@ export default function MoviePlayer({
 
   const getPlayableUrl = useCallback((url: string) => {
     if (!url) return '';
-    if (url.startsWith('blob:')) return url;
     const isExternal = url.startsWith('http') && !url.includes(window.location.host);
+    const isM3u8 = url.toLowerCase().includes('.m3u8') || url.toLowerCase().includes('m3u8');
+    
     if (isExternal) {
-      if (url.toLowerCase().includes('.m3u8') || url.toLowerCase().includes('m3u8')) {
-        return `/api/proxy/stream?url=${encodeURIComponent(url)}&referer=${encodeURIComponent(new URL(url).origin + '/')}`;
+      if (isM3u8) {
+        let referer = 'https://hoca8.com/';
+        try {
+          referer = new URL(url).origin + '/';
+        } catch (e) {}
+        return `/api/proxy/stream?url=${encodeURIComponent(url)}&referer=${encodeURIComponent(referer)}`;
+      } else {
+        return `/api/proxy/video?url=${encodeURIComponent(url)}`;
       }
-      return `/api/proxy/video?url=${encodeURIComponent(url)}`;
     }
     return url;
   }, []);
 
-  // Initialize stream
+
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !movie) return;
@@ -151,6 +158,13 @@ export default function MoviePlayer({
     setTimelinePercent(0);
 
     const activeUrl = movie.videoUrl;
+    if (!activeUrl) {
+      setPlayError("Cannot load movie source.");
+      setIsLoading(false);
+      setShowSkeleton(false);
+      return;
+    }
+
     const playableUrl = getPlayableUrl(activeUrl);
 
     if (hlsRef.current) {
@@ -702,7 +716,7 @@ export default function MoviePlayer({
             className="absolute inset-0 flex flex-col justify-between p-4 sm:p-8 z-50 bg-gradient-to-t from-black/95 via-black/30 to-black/85 pointer-events-none"
           >
             {/* Top Toolbar */}
-            <div className="flex items-center justify-between pointer-events-auto">
+            <div className="flex items-center justify-between pointer-events-auto pt-[env(safe-area-inset-top)]">
               <div className="flex items-center gap-3">
                 {onClose && (
                   <button 
@@ -1045,7 +1059,7 @@ export default function MoviePlayer({
                 </div>
               </div>
 
-              {movie.actors && movie.actors.length > 0 && (
+              {movie.actors && Array.isArray(movie.actors) && movie.actors.length > 0 && (
                 <div className="pt-2">
                   <span className="text-[9px] font-black uppercase text-white/30 tracking-wider block mb-2">Acteurs principaux</span>
                   <div className="flex flex-wrap gap-1.5">

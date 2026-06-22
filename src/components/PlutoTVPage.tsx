@@ -34,7 +34,7 @@ export default function PlutoTVPage({ onChannelSelect, onBack, deviceType }: Pro
     const q = searchQuery.toLowerCase();
     return categories.filter(cat => 
        cat.toLowerCase().includes(q) || 
-       channelsByCategory[cat].some(c => c.name.toLowerCase().includes(q))
+       channelsByCategory[cat].some(c => (c.name || '').toLowerCase().includes(q))
     );
   }, [categories, channelsByCategory, searchQuery]);
 
@@ -125,12 +125,18 @@ export default function PlutoTVPage({ onChannelSelect, onBack, deviceType }: Pro
                     className="group relative w-[160px] sm:w-[200px] md:w-[240px] aspect-video bg-[#111] border border-white/5 cursor-pointer rounded-xl md:rounded-[24px] overflow-hidden hover:border-amber-500/50 transition-all duration-500"
                   >
                     <div className="absolute inset-0 flex items-center justify-center p-4">
-                      <img
-                        src={channel.logo}
-                        alt={channel.name}
-                        className="w-full h-full object-contain relative z-20 group-hover:scale-110 transition-transform duration-700"
-                        referrerPolicy="no-referrer"
-                      />
+                      {channel.logo ? (
+                        <img
+                          src={channel.logo}
+                          alt={channel.name}
+                          className="w-full h-full object-contain relative z-20 group-hover:scale-110 transition-transform duration-700"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center opacity-50 group-hover:opacity-80 transition-opacity">
+                          <Tv size={32} className="text-white/20 mb-2" />
+                        </div>
+                      )}
                     </div>
                     <div className="absolute inset-x-0 bottom-0 p-3 z-30 bg-gradient-to-t from-black to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                       <h4 className="text-white font-black uppercase text-[10px] truncate italic">{channel.name}</h4>
@@ -145,7 +151,7 @@ export default function PlutoTVPage({ onChannelSelect, onBack, deviceType }: Pro
         {filteredCategories.length > 0 ? (
           filteredCategories.map((cat) => {
             const catChannels = searchQuery 
-              ? channelsByCategory[cat].filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+              ? channelsByCategory[cat].filter(c => (c.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
               : channelsByCategory[cat];
               
             if (catChannels.length === 0) return null;
@@ -188,8 +194,9 @@ export default function PlutoTVPage({ onChannelSelect, onBack, deviceType }: Pro
                               referrerPolicy="no-referrer"
                             />
                           ) : (
-                            <div className="text-white/5 group-hover:text-sky-500/20 transition-colors relative z-20">
-                              <Tv size={64} strokeWidth={1} />
+                            <div className="flex flex-col items-center justify-center relative z-20 opacity-50 group-hover:opacity-80 transition-opacity">
+                              <Tv size={32} className="text-white/20 mb-2 md:mb-3" />
+                              <span className="text-white/40 font-black uppercase tracking-widest text-center truncate px-2 w-full text-[10px] md:text-xs">{channel.name}</span>
                             </div>
                           )}
 

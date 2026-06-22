@@ -1341,9 +1341,9 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {channels.filter(c => 
-                      c.name.toLowerCase().includes(search.toLowerCase()) || 
-                      c.category.toLowerCase().includes(search.toLowerCase()) ||
-                      c.country?.toLowerCase().includes(search.toLowerCase())
+                      (c.name || '').toLowerCase().includes(search.toLowerCase()) || 
+                      (c.category && (c.category || '').toLowerCase().includes(search.toLowerCase())) ||
+                      (c.country || '').toLowerCase().includes(search.toLowerCase())
                     ).map((channel, i) => (
                       <tr 
                         key={`${channel.id || 'chan'}-${i}`} 
@@ -1363,8 +1363,12 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-black border border-white/10 rounded-xl p-2 shrink-0 group-hover:scale-105 transition-transform">
-                              <img src={channel.logo || undefined} alt="" className="w-full h-full object-contain" />
+                            <div className="w-12 h-12 bg-black border border-white/10 rounded-xl p-2 shrink-0 group-hover:scale-105 transition-transform flex items-center justify-center">
+                              {channel.logo ? (
+                                <img src={channel.logo} alt="" className="w-full h-full object-contain" />
+                              ) : (
+                                <Tv size={18} className="text-white/30" />
+                              )}
                             </div>
                             <div>
                               <div className="font-black text-white text-sm tracking-tight flex items-center gap-2">

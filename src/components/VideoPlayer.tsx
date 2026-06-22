@@ -25,6 +25,7 @@ interface VideoPlayerProps {
   channels?: Channel[];
   onSelectChannel?: (channel: Channel) => void;
   onMinimize?: () => void;
+  onLockPrivate?: () => void;
 }
 
 export default function VideoPlayer({ 
@@ -38,10 +39,12 @@ export default function VideoPlayer({
   onNextChannel,
   channels = [],
   onSelectChannel,
-  onMinimize
+  onMinimize,
+  onLockPrivate
 }: VideoPlayerProps) {
   const deviceType = useDeviceType();
   const isMobile = deviceType === 'mobile' || deviceType === 'tablet';
+  const isPrivateCh = channel?.isPrivate === true;
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -213,8 +216,8 @@ export default function VideoPlayer({
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   const filteredChannels = channels.filter(c => 
-    c.name.toLowerCase().includes(sidebarSearch.toLowerCase()) || 
-    c.category.toLowerCase().includes(sidebarSearch.toLowerCase())
+    (c.name || '').toLowerCase().includes(sidebarSearch.toLowerCase()) || 
+    (c.category && (c.category || '').toLowerCase().includes(sidebarSearch.toLowerCase()))
   );
 
   const [techInfo, setTechInfo] = useState({
@@ -833,7 +836,10 @@ export default function VideoPlayer({
             animate={{ opacity: 1 }} 
             exit={{ opacity: 0 }} 
             transition={{ duration: 0.35 }}
-            className="absolute inset-0 z-50 bg-[#060a13]/95 backdrop-blur-sm flex flex-col items-center justify-center pointer-events-auto select-none"
+            className={cn(
+              "absolute inset-0 z-50 backdrop-blur-sm flex flex-col items-center justify-center pointer-events-auto select-none",
+              isPrivateCh ? "bg-gradient-to-b from-[#060101]/99 via-[#0e0205]/99 to-[#170308]/99" : "bg-[#060a13]/95"
+            )}
           >
             {/* Back button on Loading Overlay */}
             <button 
@@ -845,15 +851,36 @@ export default function VideoPlayer({
               <span className="text-xs font-bold uppercase tracking-wider">Fermer</span>
             </button>
 
+            {/* Quick Lock/Panic Button on Loading Overlay for Adult channels */}
+            {isPrivateCh && onLockPrivate && (
+              <button 
+                onClick={onLockPrivate}
+                className="absolute top-6 right-6 z-[60] flex items-center gap-2 px-4 py-2 bg-red-650/90 hover:bg-red-600 rounded-full text-white transition-all duration-300 border border-red-500/30 shadow-[0_0_15px_rgba(229,9,20,0.5)] backdrop-blur-md font-black uppercase tracking-wider text-xs"
+                title="Quitter et Verrouiller"
+              >
+                <Lock size={14} className="animate-pulse" />
+                <span>Verrouiller</span>
+              </button>
+            )}
+
             {/* Ambient Animated Background Glow */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
-              <div className="absolute -top-[10%] left-[20%] w-[60%] h-[50%] rounded-full bg-[#00A8E1]/10 blur-[120px] animate-pulse" style={{ animationDuration: '6s' }} />
-              <div className="absolute -bottom-[10%] right-[20%] w-[60%] h-[50%] rounded-full bg-indigo-500/5 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
+              <div className={cn(
+                "absolute -top-[10%] left-[20%] w-[60%] h-[50%] rounded-full blur-[120px] animate-pulse",
+                isPrivateCh ? "bg-red-600/15" : "bg-[#00A8E1]/10"
+              )} style={{ animationDuration: '6s' }} />
+              <div className={cn(
+                "absolute -bottom-[10%] right-[20%] w-[60%] h-[50%] rounded-full blur-[120px] animate-pulse",
+                isPrivateCh ? "bg-rose-500/10" : "bg-indigo-500/5"
+              )} style={{ animationDuration: '8s' }} />
               
               <motion.div 
                 animate={{ x: ['-100%', '200%'] }}
                 transition={{ duration: 3.5, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-y-0 w-full bg-gradient-to-r from-transparent via-[#00A8E1]/2 to-transparent"
+                className={cn(
+                  "absolute inset-y-0 w-full bg-gradient-to-r from-transparent to-transparent",
+                  isPrivateCh ? "via-red-600/4" : "via-[#00A8E1]/2"
+                )}
               />
             </div>
 
@@ -861,7 +888,7 @@ export default function VideoPlayer({
             <div className="relative flex flex-col items-center justify-center p-6 max-w-sm text-center z-10">
               <div className="relative w-32 h-32 md:w-36 md:h-36 flex items-center justify-center mb-6">
                 
-                {/* Rotating Outer Ring (Cyan Glow) */}
+                {/* Rotating Outer Ring */}
                 <svg className="absolute w-full h-full animate-[spin_4s_linear_infinite]" viewBox="0 0 100 100">
                   <circle 
                     cx="50" 
@@ -875,8 +902,8 @@ export default function VideoPlayer({
                   />
                   <defs>
                     <linearGradient id="cyanGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#00A8E1" stopOpacity="1" />
-                      <stop offset="50%" stopColor="#818CF8" stopOpacity="0.5" />
+                      <stop offset="0%" stopColor={isPrivateCh ? "#e11d48" : "#00A8E1"} stopOpacity="1" />
+                      <stop offset="50%" stopColor={isPrivateCh ? "#f43f5e" : "#818CF8"} stopOpacity="0.5" />
                       <stop offset="100%" stopColor="transparent" stopOpacity="0" />
                     </linearGradient>
                   </defs>
@@ -896,41 +923,56 @@ export default function VideoPlayer({
                   />
                   <defs>
                     <linearGradient id="violetGlow" x1="100%" y1="100%" x2="0%" y2="0%">
-                      <stop offset="0%" stopColor="#00A8E1" stopOpacity="0.8" />
-                      <stop offset="60%" stopColor="#EC4899" stopOpacity="0.4" />
+                      <stop offset="0%" stopColor={isPrivateCh ? "#f43f5e" : "#00A8E1"} stopOpacity="0.8" />
+                      <stop offset="60%" stopColor={isPrivateCh ? "#9f1239" : "#EC4899"} stopOpacity="0.4" />
                       <stop offset="100%" stopColor="transparent" stopOpacity="0" />
                     </linearGradient>
                   </defs>
                 </svg>
 
                 {/* Pulsing Ripple Effect */}
-                <div className="absolute inset-4 rounded-full bg-gradient-to-tr from-[#00A8E1]/10 to-indigo-500/10 animate-ping opacity-60" style={{ animationDuration: '2.5s' }} />
+                <div className={cn(
+                  "absolute inset-4 rounded-full animate-ping opacity-60",
+                  isPrivateCh 
+                    ? "bg-gradient-to-tr from-rose-500/15 to-red-600/15" 
+                    : "bg-gradient-to-tr from-[#00A8E1]/10 to-indigo-500/10"
+                )} style={{ animationDuration: '2.5s' }} />
 
                 {/* Channel Logo Container */}
-                <div className="absolute inset-4 rounded-full bg-[#0d1525]/95 border border-white/10 flex items-center justify-center p-4 shadow-2xl backdrop-blur-md overflow-hidden">
-                  {channel?.logo ? (
-                    <motion.img 
-                      src={channel.logo} 
-                      alt={channel.name} 
-                      className="max-h-full max-w-full object-contain filter drop-shadow-lg"
-                      initial={{ scale: 0.8 }}
-                      animate={{ scale: [0.95, 1.05, 0.95] }}
-                      transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                  ) : (
-                    <Tv size={28} className="text-white/40" />
-                  )}
+                <div className="absolute inset-4 rounded-full bg-[#0d0708]/95 border border-white/10 flex items-center justify-center p-4 shadow-2xl backdrop-blur-md overflow-hidden">
+                  <motion.img 
+                    src={channel?.logo || "/logo-18.svg"} 
+                    alt={channel.name} 
+                    className="max-h-full max-w-full object-contain filter drop-shadow-lg"
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: [0.95, 1.05, 0.95] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                    onError={(e) => {
+                      e.currentTarget.src = "/logo-18.svg";
+                    }}
+                  />
                 </div>
               </div>
 
+              {/* -18 Warning Badge for private channels */}
+              {isPrivateCh && (
+                <div className="mb-4 px-3 py-1 rounded bg-red-950/50 border border-red-500/20 text-red-400 text-[10px] uppercase font-black tracking-widest animate-pulse flex items-center gap-1.5 shadow-lg">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                  <span>Interdit aux mineurs -18</span>
+                </div>
+              )}
+
               {/* Status Information */}
               <h4 className="font-display text-base md:text-lg font-bold text-white uppercase tracking-wider mb-1">
-                {isLoading && !showSkeleton ? "Mise en mémoire..." : "Connexion au Flux"}
+                {isLoading && !showSkeleton ? "Mise en mémoire..." : isPrivateCh ? "Connexion Sécurisée" : "Connexion au Flux"}
               </h4>
               
               <div className="flex items-center gap-1.5 mb-5 justify-center">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#00A8E1] animate-ping" />
-                <span className="text-xs font-mono font-black text-[#00A8E1] uppercase tracking-widest">
+                <span className={cn("w-1.5 h-1.5 rounded-full animate-ping", isPrivateCh ? "bg-red-500" : "bg-[#00A8E1]")} />
+                <span className={cn(
+                  "text-xs font-mono font-black uppercase tracking-widest",
+                  isPrivateCh ? "text-red-500" : "text-[#00A8E1]"
+                )}>
                   {channel?.name || "Flux Direct"}
                 </span>
               </div>
@@ -939,12 +981,12 @@ export default function VideoPlayer({
               <div className="bg-black/40 border border-white/5 rounded-2xl p-4 backdrop-blur-md w-full min-w-[260px]">
                 <div className="flex items-center justify-between text-[10px] font-mono font-bold text-white/40 uppercase tracking-wider mb-2.5">
                   <span>Statut</span>
-                  <span className="text-[#00A8E1] animate-pulse">actif</span>
+                  <span className={cn("animate-pulse", isPrivateCh ? "text-red-500" : "text-[#00A8E1]")}>actif</span>
                 </div>
                 
                 <div className="flex flex-col gap-2 text-left">
                   <div className="flex items-center gap-2 text-[10px] text-white/70">
-                    <Loader2 size={12} className="animate-spin text-[#00A8E1] shrink-0" />
+                    <Loader2 size={12} className={cn("animate-spin shrink-0", isPrivateCh ? "text-red-500" : "text-[#00A8E1]")} />
                     <span className="truncate">
                       {attemptIndex > 0 
                         ? `Source secours en cours (${attemptIndex + 1}/${streamsToTry.length})` 
@@ -1065,7 +1107,7 @@ export default function VideoPlayer({
             <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/90 pointer-events-none" />
             
             {/* Top Toolbar: NEW PROFESSIONAL HEADER */}
-            <div className={cn("relative z-10 flex flex-row items-center justify-between pointer-events-auto w-full", isMobile ? "p-2 px-3 gap-2" : "p-8 lg:p-10 gap-4")}>
+            <div className={cn("relative z-10 flex flex-row items-center justify-between pointer-events-auto w-full", isMobile ? "pt-[max(env(safe-area-inset-top),_0.5rem)] p-2 px-3 gap-2" : "p-8 lg:p-10 gap-4")}>
               
               {/* Left Group: Back & Channel Indicator */}
               <div className="flex items-center gap-1.5 md:gap-4 shrink w-[75%] sm:w-[80%] md:w-auto overflow-hidden">
@@ -1082,12 +1124,33 @@ export default function VideoPlayer({
                   </button>
                 )}
 
+                {/* Panic lock action inside the player for private streams */}
+                {isPrivateCh && onLockPrivate && (
+                  <button 
+                    onClick={onLockPrivate}
+                    className={cn(
+                      "flex items-center justify-center bg-red-650 hover:bg-red-600 rounded-full text-white transition-all duration-300 border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.4)] hover:scale-105 shrink-0 font-bold uppercase",
+                      isMobile ? "w-10 h-10" : "px-5 h-14 gap-2 text-xs select-none tracking-widest"
+                    )}
+                    title="Fermer et Verrouiller d'urgence la Zone Privée"
+                  >
+                    <Lock size={isMobile ? 16 : 18} className="animate-pulse" />
+                    {!isMobile && <span>Verrouiller</span>}
+                  </button>
+                )}
+
                 <div className="flex items-center gap-3 shrink-0 ml-1">
                   <div className={cn(
                     "flex items-center justify-center shrink-0 transition-transform",
                     isMobile ? "h-10 w-16" : "h-14 w-20"
                   )}>
-                    <img src={channel.logo || undefined} alt="" className="h-full w-full object-contain drop-shadow-2xl brightness-110" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    {channel.logo ? (
+                      <img src={channel.logo} alt="" className="h-full w-full object-contain drop-shadow-2xl brightness-110" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    ) : (
+                      <div className="h-full w-full flex flex-col items-center justify-center filter drop-shadow-md bg-white/5 rounded-lg border border-white/10">
+                        <Tv size={18} className="text-white/40 mb-0.5" />
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col min-w-0">
                     <h1 className={cn(

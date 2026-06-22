@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 210" width="100%" height="100%">
+  <defs>
+    <!-- Sky blue to purple gradient matching the logo -->
+    <linearGradient id="beLogoGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8171B6" />
+      <stop offset="40%" stop-color="#658FD8" />
+      <stop offset="80%" stop-color="#34A3E3" />
+      <stop offset="100%" stop-color="#00A7E1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Left: The iconic TV box outline -->
+  <g transform="translate(10, 5)">
+    <!-- Retro television handdrawn outline -->
+    <path d="M 45 15 
+             C 120 12, 180 12, 235 18
+             C 255 20, 260 35, 260 100
+             C 260 165, 255 180, 235 182
+             C 180 188, 120 188, 45 185
+             C 25 183, 20 168, 20 100
+             C 20 32, 25 17, 45 15 Z" 
+          fill="none" 
+          stroke="url(#beLogoGrad)" 
+          stroke-width="11" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
+
+    <!-- Cursive handwritten 'Be' -->
+    <path d="M 125 48
+             C 105 48, 85 75, 75 110
+             C 65 145, 73 162, 85 162
+             C 98 162, 115 130, 140 90
+             C 155 65, 172 42, 182 42
+             C 192 42, 195 55, 182 82
+             C 168 112, 142 145, 148 152
+             C 155 160, 180 148, 205 115
+             C 225 88, 235 95, 222 118
+             C 210 138, 195 150, 182 150
+             C 173 150, 170 142, 178 132
+             C 186 122, 198 122, 200 128"
+          fill="none" 
+          stroke="url(#beLogoGrad)" 
+          stroke-width="11" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
+  </g>
+
+  <!-- Right: 'Ciné' sans-serif typography matching the uploaded logo -->
+  <text x="290" y="145" font-family="'Inter', 'Outfit', 'Segoe UI', system-ui, sans-serif" font-weight="500" font-size="112" fill="#00A7E1" letter-spacing="-1">Ciné</text>
+  
+  <!-- Small dot over i -->
+  <path d="M 402 45 C 405 38, 412 35, 418 35 C 423 35, 427 40, 423 48 C 418 55, 410 58, 405 58 C 400 58, 398 52, 402 45 Z" fill="#00A7E1" />
+</svg>

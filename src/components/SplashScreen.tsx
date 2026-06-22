@@ -11,7 +11,7 @@ export default function SplashScreen({ onFinish }: { onFinish: () => void }) {
       setTimeout(onFinish, 500);
     }, 2500);
     return () => clearTimeout(timer);
-  }, [onFinish]);
+  }, []);
 
   return (
     <AnimatePresence>
