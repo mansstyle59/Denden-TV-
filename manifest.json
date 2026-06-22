@@ -1,0 +1,29 @@
+{
+  "short_name": "DENDEN TV",
+  "name": "DENDEN TV - IPTV & Cinéma Premium",
+  "description": "Plateforme IPTV & Cinéma Premium avec gestion de bibliothèque de films, EPG temps réel et interface haute performance optimisée.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "100x100"
+    },
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#000000",
+  "theme_color": "#00A8E1",
+  "display": "standalone",
+  "orientation": "landscape"
+}

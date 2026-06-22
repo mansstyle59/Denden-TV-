@@ -1,0 +1,6 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" fill="#000000" />
+  <text x="256" y="150" font-family="sans-serif" font-weight="bold" font-size="95" fill="#FF7900" text-anchor="middle">Orange</text>
+  <path d="M 140 200 L 430 345 L 140 490 Z" fill="#FF7900" stroke="#FF7900" stroke-width="20" stroke-linejoin="round" />
+  <text x="230" y="380" font-family="sans-serif" font-weight="bold" font-size="100" fill="#000000" text-anchor="middle">TV</text>
+</svg>
