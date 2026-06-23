@@ -44,7 +44,7 @@ export default function ChannelCardWrapper({
       whileHover={whileHover}
       whileTap={whileTap}
       transition={transition}
-      style={{ willChange: 'transform' }}
+      style={{ willChange: 'transform', backfaceVisibility: 'hidden' }}
       className={cn(
         className, 
         "focus:outline-none focus:ring-4 focus:ring-red-650/60 focus:scale-105 focus:z-10 focus:shadow-[0_0_25px_rgba(0,168,225,0.4)]",

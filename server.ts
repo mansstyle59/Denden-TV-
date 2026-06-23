@@ -40,7 +40,10 @@ const INITIAL_DATA = {
     pin: '0104',
     theme: 'dark'
   },
-  epgCache: {}
+  epgCache: {},
+  epgSources: [
+    { id: '1', name: 'EPG Share France', url: 'https://epgshare01.online/epgshare01/epg_ripper_FR1.xml.gz', isActive: true, lastSync: null }
+  ]
 };
 
 function readDb() {
@@ -52,11 +55,41 @@ function readDb() {
     } else {
       data = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
     }
+
+    // Ensure database consistency
+    if (!data.channels) data.channels = [];
+    if (!data.movies) data.movies = [];
+    if (!data.epgSources) data.epgSources = INITIAL_DATA.epgSources;
+    if (!data.settings) data.settings = INITIAL_DATA.settings;
+
     // Clean demo channels anyway to fulfill clean up requirements with full null-safety
     if (data && data.channels) {
       const originalCount = data.channels.length;
+
+      const adultKeywords = [
+        'adulte', 'adult', 'xxx', 'sexe', 'charm', 'erotic', 'porn', 'colmax', 
+        'libidin', 'dorcel', 'hustler', 'playboy', 'redlight', 'penthouse', 
+        'beate uhse', 'pinko', 'sexy', '+18', '-18', 'vod x', 'film x', 'hentai'
+      ];
+
+      function isAdult(c: any): boolean {
+        if (!c) return false;
+        if (c.isPrivate) return true;
+        const name = (c.name || '').toLowerCase();
+        const cat = (c.category || '').toLowerCase();
+        const url = (c.url || '').toLowerCase();
+        
+        return adultKeywords.some(kw => 
+          name.includes(kw) || 
+          cat.includes(kw) || 
+          url.includes(kw) || 
+          url.includes('adult-tv-channels.click')
+        );
+      }
+
       let channels = data.channels.filter((c: any) => {
         if (!c) return false;
+        if (isAdult(c)) return false; // PERMANENT FILTER
         const urlStr = c.url || '';
         const nameStr = c.name || '';
         return !urlStr.includes('test-streams.mux.dev') || nameStr.toLowerCase().includes('france 2');
@@ -319,7 +352,7 @@ async function syncEPG(io: Server) {
   console.log('Initiating EPG synchronization sync...');
   let newProgrammes: any[] = [];
 
-  for (const source of db.epgSources) {
+  for (const source of (db.epgSources || [])) {
     if (!source.isActive) continue;
     try {
       console.log(`Fetching EPG source: ${source.name} (${source.url})`);
@@ -513,7 +546,7 @@ async function startServer() {
       activeChannels: online + slow,
       offlineChannels: offline,
       totalCategories: db.categories.length,
-      lastEpgSync: db.epgSources.reduce((latest: string | null, s: any) => {
+      lastEpgSync: (db.epgSources || []).reduce((latest: string | null, s: any) => {
         if (!s.lastSync) return latest;
         if (!latest) return s.lastSync;
         return new Date(s.lastSync) > new Date(latest) ? s.lastSync : latest;
@@ -797,6 +830,28 @@ async function startServer() {
       ];
       cats = ["Magazine Sportif", "Football", "Sport", "Documentaire Sport"];
       progDuration = 60;
+    } else if (normName.includes('cine+ frisson') || normName.includes('cineplus frisson')) {
+      titles = [
+        "Frisson : La Nuit des Morts",
+        "Thriller : Le Silence de l'Agneau",
+        "Horreur : La Maison Hantée",
+        "Suspense : Piège Mortel",
+        "Action : Course contre la Mort",
+        "Fantastique : Les Ombres du Passé",
+        "Frisson : L'Attaque des Mutants",
+        "Thriller : Pacte avec le Diable",
+        "Horreur : La Forêt Maudite",
+        "Suspense : Le Dernier Témoin"
+      ];
+      descs = [
+        "Un classique du film d'horreur pour vous faire trembler toute la nuit.",
+        "Un thriller psychologique sombre où chaque seconde compte.",
+        "Plus jamais vous ne regarderez votre maison de la même façon.",
+        "Le suspense est à son comble dans ce huis clos étouffant.",
+        "Adrénaline pure : survivez à cette course démoniaque."
+      ];
+      cats = ["Horreur", "Thriller", "Ciné-Frisson", "Suspense"];
+      progDuration = 100;
     } else if (category.includes('Cinéma') || normName.includes('cine') || normName.includes('film') || normName.includes('canal+')) {
       titles = [
         "Film : Le Destin Ultime",
@@ -897,7 +952,16 @@ async function startServer() {
     
     let currentStart = startOfDay.getTime();
     let index = 0;
-    const endLimitTime = startOfDay.getTime() + 48 * 60 * 60 * 1000; // 48 hours
+    
+    // Shift currentStart to be the nearest past program start time relative to now, 
+    // to keep the schedule somewhat aligned with the actual current time.
+    const nowTime = now.getTime();
+    while (currentStart + progDuration * 60000 < nowTime) {
+      currentStart += progDuration * 60000;
+      index++;
+    }
+    
+    const endLimitTime = currentStart + 48 * 60 * 60 * 1000; // 48 hours from the adjusted start
     
     while (currentStart < endLimitTime) {
       const t = titles[index % titles.length];
@@ -936,8 +1000,11 @@ async function startServer() {
     for (const channel of db.channels) {
       const norm = normalizeChannelName(channel.name);
       
-      // XMLTV matching - correct, priority-based match, no fallback mock data when missing
-      const progs = findCorrectEpgProgs(channel);
+      // XMLTV matching - correct, priority-based match, with fallback mock data when missing
+      let progs = findCorrectEpgProgs(channel);
+      if (progs.length === 0) {
+        progs = generateFallbackEpgForChannel(channel.name, channel.category || '', now);
+      }
 
       let current = null;
       let next = null;
@@ -2543,29 +2610,8 @@ async function startServer() {
     // Regular repair
     axios.post(`http://localhost:${PORT}/api/channels/repair`).catch(() => {});
 
-    // Private channels cleanup: specifically test and delete HS private channels
-    try {
-      const db = readDb();
-      const privateChannels = db.channels.filter((c: any) => c.isPrivate);
-      const toDelete: string[] = [];
-
-      for (const channel of privateChannels) {
-        const stats = await checkStream(channel.url);
-        if (stats.status === 'offline') {
-           console.log(`[Auto-Cleanup] Private channel ${channel.name} is Offline/HS. Adding to deletion list.`);
-           toDelete.push(channel.id);
-        }
-      }
-
-      if (toDelete.length > 0) {
-        db.channels = db.channels.filter((c: any) => !toDelete.includes(c.id));
-        writeDb(db);
-        io.emit('CHANNELS_SYNC', db.channels);
-        console.log(`[Auto-Cleanup] Successfully removed ${toDelete.length} defunct private channels.`);
-      }
-    } catch (err) {
-      console.error('[Auto-Cleanup] Private zone sweep failed');
-    }
+    // Regular repair
+    axios.post(`http://localhost:${PORT}/api/channels/repair`).catch(() => {});
   }, 1 * 60 * 60 * 1000);
 }
 

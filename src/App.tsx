@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import io from 'socket.io-client';
 import axios from 'axios';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Channel, AppSettings, AppState, Movie } from './types';
 import SplashScreen from './components/SplashScreen';
 import Navigation from './components/Navigation';
@@ -16,9 +16,7 @@ import { useDeviceType } from './hooks/useDeviceType';
 import { useTVNav } from './hooks/useTVNav';
 import SettingsPanel from './components/SettingsPanel';
 import MovieSettings from './components/MovieSettings';
-import SecretChannelBanner from './components/SecretChannelBanner';
 import PlutoTVPage from './components/PlutoTVPage';
-import PrivatePlutoPage from './components/PrivatePlutoPage';
 import SportPage from './components/SportPage';
 import { PLUTO_CHANNELS } from './plutoChannels';
 import { Settings, Shield, Lock, Search, Filter, History, Star, Play, ChevronRight, Plus, Maximize2, Trash2, Hash, Tv, Film, X, Sparkles, BookOpen, Users, Calendar, Clock, Globe } from 'lucide-react';
@@ -28,10 +26,7 @@ import { cn } from './lib/utils';
 const socket = io();
 
 const isAdultChannel = (c: Channel): boolean => {
-  if (c.isPrivate) return true;
-  if (c.category && /adulte|adult|xxx|sexe|charm|erotic|porn/i.test(c.category)) return true;
-  if (c.name && /\b(xxx|porn|erotic|sexe|colmax|libidin|dorcel|hustler|playboy|redlight|penthouse|beate uhse|pinko|sexy|adult|\+18|\-18)\b/i.test(c.name)) return true;
-  return false;
+  return false; // Permanently disabled server-side
 };
 
 export default function App() {
@@ -45,7 +40,6 @@ export default function App() {
   const [isFullScreenPlayer, setIsFullScreenPlayer] = useState(false);
   const [isFullScreenMoviePlayer, setIsFullScreenMoviePlayer] = useState(false);
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
-  const [isPrivateUnlocked, setIsPrivateUnlocked] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [showPinModal, setShowPinModal] = useState(false);
   const [channelsSearch, setChannelsSearch] = useState('');
@@ -145,18 +139,14 @@ export default function App() {
   }, []);
 
   const visibleChannels = useMemo(() => {
-    return channels.filter(c => !isAdultChannel(c) && !PLUTO_CHANNELS.some(pc => pc.id === c.id));
+    return channels.filter(c => !PLUTO_CHANNELS.some(pc => pc.id === c.id));
   }, [channels]);
 
   const allVisibleForPlayer = useMemo(() => {
     // This is for next/prev navigation in common player
     // If we're watching a Pluto channel, we want to skip between Pluto channels
     // If we're watching a normal channel, we skip between normal channels
-    return channels.filter(c => !isAdultChannel(c));
-  }, [channels]);
-
-  const privateChannels = useMemo(() => {
-    return channels.filter(c => isAdultChannel(c));
+    return channels;
   }, [channels]);
 
 
@@ -234,14 +224,6 @@ export default function App() {
   const handleSectionChange = (section: string) => {
     setActiveSection(section);
   };
-
-  const handleLockPrivate = useCallback(() => {
-    setSelectedChannel(null);
-    setIsFullScreenPlayer(false);
-    setIsPrivateUnlocked(false);
-    setActiveSection('home');
-    toast.success("Zone Privée Fermée & Sécurisée.");
-  }, []);
 
   const [showChannelActions, setShowChannelActions] = useState<{ channel: Channel, isOpen: boolean } | null>(null);
 
@@ -379,24 +361,16 @@ export default function App() {
                     <span className="bg-gradient-to-r from-teal-600 to-emerald-500 text-white px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md">VIVEZ L'INTENSITÉ DU SPORT</span>
                     <h3 className="text-xl font-black text-white tracking-tight italic uppercase">DENDEN SPORT+</h3>
                   </div>
-                  <p className="text-white/45 text-xs sm:text-sm font-medium mt-1 truncate">UFC, NBA, Ligue des Champions & L'intégralité du Sport en Direct</p>
+                  <p className="text-white/45 text-xs sm:text-sm font-medium mt-1 truncate">Matchs d'aujourd'hui, demain et toute la saison live</p>
                 </div>
               </div>
               <button 
                 onClick={() => handleSectionChange('sport')}
-                className="w-full md:w-auto bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-500 hover:to-emerald-400 text-white font-black text-sm px-8 py-4 rounded-xl hover:shadow-lg hover:shadow-teal-600/30 active:scale-95 transition-all text-center cursor-pointer shrink-0"
+                className="w-full md:w-auto bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-500 hover:to-emerald-400 text-white font-black text-sm px-8 py-4 rounded-xl hover:shadow-lg hover:shadow-teal-600/30 active:scale-95 transition-all text-center cursor-pointer shrink-0 uppercase tracking-widest"
               >
-                Accéder au Hub Sport
+                Calendrier & Directs
               </button>
             </div>
-
-            {/* Secret Channels Banner */}
-            {!isPrivateUnlocked && (
-              <SecretChannelBanner onUnlock={() => {
-                setIsPrivateUnlocked(true);
-                setActiveSection('private_hub');
-              }} />
-            )}
 
             <ChannelGrid 
               channels={filtered} 
@@ -419,24 +393,11 @@ export default function App() {
       case 'sport':
         return (
           <SportPage 
-            channels={visibleChannels}
-            onChannelSelect={handleSelectChannel}
             onBack={() => setActiveSection('channels')}
-            deviceType={deviceType}
-            liveEpg={liveEpg}
-          />
-        );
-      case 'private_hub':
-        return (
-          <PrivatePlutoPage 
-            channels={privateChannels}
-            onChannelSelect={handleSelectChannel}
-            onBack={() => setActiveSection('home')}
-            deviceType={deviceType}
           />
         );
       case 'search': {
-        const searchParentalLocked = !isPrivateUnlocked;
+        const searchParentalLocked = true; // Parental lock is now always active
         const query = channelsSearch.trim().toLowerCase();
         
         // Match Highlight helper
@@ -454,8 +415,7 @@ export default function App() {
           );
         };
 
-        // Strict Parental protection. If locked, normal visibleChannels are searched. Adult category is always forbidden.
-        // If unlocked, users can search normal feeds or check the 🔞 Mature space.
+        // Strict Parental protection.
         const filteredChannels = query ? visibleChannels
           .filter(c => 
             (c.name || '').toLowerCase().includes(query) || 
@@ -471,13 +431,6 @@ export default function App() {
           (m.actors && Array.isArray(m.actors) && m.actors.some(a => (a || '').toLowerCase().includes(query))) ||
           (m.summary && (m.summary || '').toLowerCase().includes(query))
         ) : [];
-
-        // Adult Channels matching (ONLY searched/shown when parental filter is UNLOCKED)
-        const filteredAdultChannels = (!searchParentalLocked && query) ? privateChannels
-          .filter(c => 
-            (c.name || '').toLowerCase().includes(query) || 
-            (c.category && (c.category || '').toLowerCase().includes(query))
-          ) : [];
 
         const channelCategories = Array.from(new Set(channels.map(c => c.category))).filter((category): category is string => !!category && category !== 'Adulte');
         const movieGenres = Array.from(new Set(movies.flatMap(m => (m.genres && Array.isArray(m.genres)) ? m.genres : []))).filter((g): g is string => !!g);
@@ -559,7 +512,7 @@ export default function App() {
                            : "bg-white/5 hover:bg-white/10 text-white/50 hover:text-white"
                        )}
                      >
-                       Tout ({filteredChannels.length + filteredMovies.length + filteredAdultChannels.length})
+                       Tout ({filteredChannels.length + filteredMovies.length})
                      </button>
                      <button
                        onClick={() => setSearchTab('channels')}
@@ -585,22 +538,6 @@ export default function App() {
                        <Film size={14} />
                        Films & VOD ({filteredMovies.length})
                      </button>
-
-                     {/* 🔞 Adult contents tab - unlocked-only */}
-                     {!searchParentalLocked && (
-                       <button
-                         onClick={() => setSearchTab('adults')}
-                         className={cn(
-                           "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer",
-                           searchTab === 'adults' 
-                             ? "bg-red-650 text-white shadow-lg shadow-red-650/20" 
-                             : "bg-white/5 hover:bg-red-500/10 text-rose-400 hover:text-red-300 animate-pulse"
-                         )}
-                       >
-                         <span>🔞</span>
-                         Adultes (X) ({filteredAdultChannels.length})
-                       </button>
-                     )}
                    </div>
 
                    <span className="text-white/20 text-xs font-medium">Recherche interactive instantanée</span>
@@ -733,57 +670,8 @@ export default function App() {
                   </div>
                 )}
 
-                {/* 3. Adult channels results group (Only when unlocked) */}
-                {!searchParentalLocked && (searchTab === 'all' || searchTab === 'adults') && (
-                  <div className="space-y-4">
-                    {searchTab === 'all' && filteredAdultChannels.length > 0 && (
-                      <h3 className="text-xs font-black uppercase tracking-widest text-[#555] flex items-center gap-2 border-b border-white/5 pb-2">
-                        <span className="text-red-500">🔞</span>
-                        Espace Adulte Déverrouillé ({filteredAdultChannels.length})
-                      </h3>
-                    )}
-                    {filteredAdultChannels.length > 0 ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-3 md:gap-4 animate-fade-in animate-spring">
-                        {filteredAdultChannels.map((channel, i) => (
-                          <motion.div
-                            onClick={() => {
-                              handleSelectChannel(channel);
-                              addToSearchHistory(channel.name);
-                            }}
-                            whileHover={{ scale: 1.05 }}
-                            transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                            key={`adult-${channel.id}-${i}`}
-                            className="group relative bg-[#0c0909]/90 border border-red-500/20 cursor-pointer rounded-2xl overflow-hidden p-3.5 hover:border-red-500 hover:bg-black/50 hover:shadow-lg transition-all"
-                          >
-                            <div className="w-full flex items-center justify-center bg-black/65 rounded-xl h-24 mb-3 p-2 relative">
-                              <img src={channel.logo || "/logo-18.svg"} alt="" className="max-h-[70px] max-w-[80%] object-contain" referrerPolicy="no-referrer" />
-                              <div className="absolute top-1.5 right-1.5 bg-red-650 text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">-18</div>
-                            </div>
-                            <div className="space-y-1 bg-transparent">
-                              <span className="bg-red-500/10 text-rose-400 border border-red-500/20 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded block w-fit truncate max-w-full">
-                                {channel.category || "🔞 Adulte"}
-                              </span>
-                              <h4 className="text-white font-black text-xs sm:text-sm truncate">
-                                {highlightMatch(channel.name, query)}
-                              </h4>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    ) : (
-                      searchTab === 'adults' && (
-                        <div className="h-56 bg-red-950/5 border border-red-500/10 border-dashed rounded-[24px] flex flex-col items-center justify-center text-center p-6">
-                          <span className="text-3xl mb-2">🔞</span>
-                          <p className="text-rose-400/60 text-xs font-black uppercase tracking-widest">Aucun flux adulte trouvé</p>
-                          <p className="text-white/20 text-xs mt-1 max-w-md">Essayez des mots-clés plus généraux comme "Pink", "Penthouse" ou "Ero"</p>
-                        </div>
-                      )
-                    )}
-                  </div>
-                )}
-
                 {/* Ultimate No Results Block */}
-                {filteredChannels.length === 0 && filteredMovies.length === 0 && filteredAdultChannels.length === 0 && (
+                {filteredChannels.length === 0 && filteredMovies.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-72 text-center p-6 border border-white/5 rounded-3xl bg-white/[0.01]">
                     <Search size={44} className="text-white/20 mb-3 animate-pulse" />
                     <h3 className="text-white/50 font-black text-lg uppercase tracking-tight">Aucun résultat pour "{query}"</h3>
@@ -994,8 +882,6 @@ export default function App() {
         activeSection={activeSection} 
         onSectionChange={handleSectionChange}
         deviceType={deviceType}
-        isPrivateUnlocked={isPrivateUnlocked}
-        onLockPrivate={handleLockPrivate}
       />
       
       <main className="flex-1 overflow-y-auto p-2 md:p-4 lg:p-8 scrollbar-hide scroll-smooth relative">
@@ -1335,7 +1221,6 @@ export default function App() {
             onPrevChannel={handlePrevChannel}
             channels={channels}
             onSelectChannel={handleSelectChannel}
-            onLockPrivate={handleLockPrivate}
           />
         </motion.div>
       )}

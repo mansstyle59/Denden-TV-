@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Play, Info, Plus, Star, Clock, Calendar, Globe, User, 
   X, Share2, Film, Search, Settings, Filter, ArrowRight,
@@ -222,7 +222,7 @@ export default function MovieHub({
               <div className="w-1.5 h-1.5 rounded-full bg-indigo-600/20" />
             </div>
           </div>
-          <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide snap-x">
+          <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide snap-x scroll-smooth scroll-px-4">
             {movies.slice(0, 10).map((movie) => (
               <motion.div
                 key={`trending-${movie.id}`}
@@ -298,7 +298,7 @@ export default function MovieHub({
 
       {/* 3. Horizontal Genre Pills Selection */}
       {availableGenres.length > 1 && (
-        <div className="px-6 sm:px-12 mb-10 overflow-x-auto scrollbar-hide flex gap-3 pb-3 mask-image-edge">
+        <div className="px-6 sm:px-12 mb-10 overflow-x-auto scrollbar-hide flex gap-3 pb-3 mask-image-edge scroll-smooth scroll-px-4">
           {availableGenres.map((genre) => {
             const isActive = selectedGenre === genre;
             return (

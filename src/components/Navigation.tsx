@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Home, Tv2, Search, Clapperboard, SlidersHorizontal, KeyRound } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { DeviceType } from '../hooks/useDeviceType';
 import DendenLogo from './DendenLogo';
@@ -11,8 +11,6 @@ interface NavigationProps {
   onSectionChange: (section: string) => void;
   isCollapsed?: boolean;
   deviceType: DeviceType;
-  isPrivateUnlocked?: boolean;
-  onLockPrivate?: () => void;
 }
 
 interface NavigationButtonProps {
@@ -77,15 +75,12 @@ const defaultMenuItems = [
   { id: 'search', icon: Search, label: 'Recherche' },
 ];
 
-export default function Navigation({ activeSection, onSectionChange, isCollapsed = false, deviceType, isPrivateUnlocked, onLockPrivate }: NavigationProps) {
+export default function Navigation({ activeSection, onSectionChange, isCollapsed = false, deviceType }: NavigationProps) {
   const isMobile = deviceType === 'mobile';
 
   const menuItems = React.useMemo(() => {
-    if (isPrivateUnlocked) {
-      return [...defaultMenuItems, { id: 'private_hub', icon: KeyRound, label: 'Zone Privée' }];
-    }
     return defaultMenuItems;
-  }, [isPrivateUnlocked]);
+  }, []);
 
   if (isMobile) {
     return (
@@ -97,7 +92,6 @@ export default function Navigation({ activeSection, onSectionChange, isCollapsed
               <NavigationButton
                 key={item.id}
                 onClick={() => onSectionChange(item.id)}
-                onLongPress={item.id === 'private_hub' ? onLockPrivate : undefined}
                 className={cn(
                   "flex flex-col items-center justify-center relative w-[18%] min-w-[3.5rem] h-14 rounded-full transition-all focus:outline-none group",
                   isActive ? "text-white" : "text-white/40 hover:text-white/80"
@@ -148,7 +142,6 @@ export default function Navigation({ activeSection, onSectionChange, isCollapsed
             <NavigationButton
               key={item.id}
               onClick={() => onSectionChange(item.id)}
-              onLongPress={item.id === 'private_hub' ? onLockPrivate : undefined}
               className={cn(
                 "w-full flex items-center px-4 py-4 rounded-2xl transition-all font-bold text-xs uppercase tracking-widest focus:outline-none relative overflow-hidden group cursor-pointer",
                 isActive ? "text-white" : "text-white/40 hover:text-white"

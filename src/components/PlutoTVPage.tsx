@@ -4,7 +4,7 @@ import { Channel } from '../types';
 import ChannelCardWrapper from './ChannelCardWrapper';
 import { Play, Tv, Search, Zap, ArrowLeft, Disc } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
   onChannelSelect: (channel: Channel) => void;
@@ -110,7 +110,7 @@ export default function PlutoTVPage({ onChannelSelect, onBack, deviceType }: Pro
               </div>
             </div>
 
-            <div className="flex items-center gap-4 md:gap-6 overflow-x-auto pb-6 scrollbar-hide -mx-4 px-4 snap-x">
+            <div className="flex items-center gap-4 md:gap-6 overflow-x-auto pb-6 scrollbar-hide -mx-4 px-4 snap-x scroll-smooth scroll-px-4">
               {recentPlutoChannels.map((channel, i) => (
                 <motion.div
                   key={`pluto-recent-${channel.id}`}
@@ -166,7 +166,7 @@ export default function PlutoTVPage({ onChannelSelect, onBack, deviceType }: Pro
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 md:gap-6 overflow-x-auto pb-6 scrollbar-hide -mx-4 px-4 snap-x">
+                <div className="flex items-center gap-4 md:gap-6 overflow-x-auto pb-6 scrollbar-hide -mx-4 px-4 snap-x scroll-smooth scroll-px-4">
                   {catChannels.map((channel, i) => (
                     <motion.div
                       key={channel.id}

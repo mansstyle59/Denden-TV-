@@ -56,6 +56,9 @@
     -webkit-overflow-scrolling: touch;
     overflow-x: hidden !important;
     width: 100%;
+    scroll-behavior: smooth;
+    will-change: transform;
+    backface-visibility: hidden;
   }
 
   /* Allow horizontal scroll ONLY inside explicit carousels or scrollables */
@@ -64,6 +67,8 @@
     overscroll-behavior-x: contain !important;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x !important; /* Lock vertical scroll when swiping carousel */
+    scroll-behavior: smooth;
+    scroll-snap-type: x proximity;
   }
 
   /* Clean scrollbar styling */

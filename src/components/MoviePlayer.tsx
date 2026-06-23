@@ -6,7 +6,7 @@ import {
   Clock, Activity, ChevronRight, Sliders, Layout, RefreshCw, AlertTriangle, Loader2, Film,
   ChevronLeft
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { Movie } from '../types';
 import { useDeviceType } from '../hooks/useDeviceType';

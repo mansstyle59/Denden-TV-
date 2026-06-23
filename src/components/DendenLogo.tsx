@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../lib/utils';
+import { motion } from 'framer-motion';
 
 interface DendenLogoProps {
   variant?: 'horizontal' | 'icon-only' | 'splash' | 'compact';
@@ -15,7 +16,7 @@ export default function DendenLogo({
   animate = false 
 }: DendenLogoProps) {
   
-  // Icon only component - combining TV Frame, Play Button, and Streaming Waves
+  // Icon only component - matching the new blue neon TV design
   const renderIcon = () => {
     return (
       <svg
@@ -30,113 +31,52 @@ export default function DendenLogo({
         )}
       >
         <defs>
-          <radialGradient id="redGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#0ea5e9" stopOpacity="0" />
+          <radialGradient id="blueGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#00A8E1" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#00A8E1" stopOpacity="0" />
           </radialGradient>
           
-          {/* Metallic / Premium stroke gradient */}
-          <linearGradient id="tvStroke" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#333333" />
-            <stop offset="50%" stopColor="#0ea5e9" />
-            <stop offset="100%" stopColor="#111111" />
+          <linearGradient id="tvNeon" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#00A8E1" />
+            <stop offset="49%" stopColor="#00A8E1" />
+            <stop offset="51%" stopColor="#ef4444" />
+            <stop offset="100%" stopColor="#ef4444" />
           </linearGradient>
 
-          {/* Premium Denden Blue Gradient for Play Button */}
-          <linearGradient id="redPlayGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#38bdf8" />
-            <stop offset="100%" stopColor="#0284c7" />
-          </linearGradient>
-
-          {/* Neon shadow filter for TV screen glow */}
-          <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="6" result="blur" />
+          <filter id="neonBlur" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
         </defs>
 
-        {/* Outer ambient glow for TV mode */}
+        {/* Global background glow for splash */}
         {variant === 'splash' && (
-          <circle cx="50" cy="50" r="45" fill="url(#redGlow)" className="animate-pulse" />
+          <circle cx="50" cy="50" r="45" fill="url(#blueGlow)" opacity="0.3" />
         )}
 
-        {/* 1. TV Screen Shape (Rounded container) */}
+        {/* TV Frame Shape */}
         <rect
-          x="12"
-          y="18"
-          width="76"
-          height="54"
-          rx="12"
-          fill="#000000"
-          stroke="url(#tvStroke)"
-          strokeWidth="3.5"
+          x="15"
+          y="20"
+          width="70"
+          height="45"
+          rx="10"
+          stroke="url(#tvNeon)"
+          strokeWidth="4"
+          filter="url(#neonBlur)"
           className="transition-all duration-300"
         />
 
-        {/* TV Indicator LED */}
-        <circle cx="50" cy="76" r="2.5" fill="#0ea5e9" />
-        {/* TV Stand Base */}
-        <path d="M40 76 L60 76 L55 82 L45 82 Z" fill="#1A1A1A" stroke="#333" strokeWidth="1" />
+        {/* TV Stand / Base Connector */}
+        <rect x="47" y="65" width="6" height="5" fill="#00A8E1" />
+        <rect x="35" y="70" width="30" height="3" rx="1.5" fill="#00A8E1" />
 
-        {/* 2. Streaming Waves (Concentric broadcast radiation rings) */}
-        {/* Left Waves */}
+        {/* Play Button inside TV */}
         <path
-          d="M 32 35 A 18 18 0 0 0 32 55"
-          stroke="#0ea5e9"
-          strokeWidth="3"
-          strokeLinecap="round"
-          opacity="0.5"
-          className={cn(animate && "animate-[ping_2s_infinite_100ms]")}
+          d="M44 32.5L62 42.5L44 52.5V32.5Z"
+          fill="white"
+          className="drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"
         />
-        <path
-          d="M 24 30 A 28 28 0 0 0 24 60"
-          stroke="#0ea5e9"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          opacity="0.3"
-          className={cn(animate && "animate-[ping_2.5s_infinite_300ms]")}
-        />
-
-        {/* Right Waves */}
-        <path
-          d="M 68 35 A 18 18 0 0 1 68 55"
-          stroke="#0ea5e9"
-          strokeWidth="3"
-          strokeLinecap="round"
-          opacity="0.5"
-          className={cn(animate && "animate-[ping_2s_infinite_100ms]")}
-        />
-        <path
-          d="M 76 30 A 28 28 0 0 1 76 60"
-          stroke="#0ea5e9"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          opacity="0.3"
-          className={cn(animate && "animate-[ping_2.5s_infinite_300ms]")}
-        />
-
-        {/* 3. Deep inner screen container */}
-        <rect
-          x="17"
-          y="23"
-          width="66"
-          height="44"
-          rx="8"
-          fill="#060606"
-          stroke="#1A1A1A"
-          strokeWidth="1.5"
-        />
-
-        {/* 4. Play Button Centerpiece */}
-        <g filter="url(#neonGlow)">
-          <polygon
-            points="42,33 65,45 42,57"
-            fill="url(#redPlayGrad)"
-            stroke="#FFFFFF"
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-          />
-        </g>
       </svg>
     );
   };
@@ -152,21 +92,35 @@ export default function DendenLogo({
   if (variant === 'splash') {
     return (
       <div className={cn("flex flex-col items-center justify-center text-center", className)}>
-        {/* Huge Animated TV Glowing Icon */}
-        <div className="relative mb-8">
-          <div className="absolute inset-0 bg-[#0ea5e9]/15 rounded-full blur-3xl w-64 h-64 -translate-y-16 -translate-x-12 pointer-events-none" />
-          {renderIcon()}
-        </div>
+        {/* Rounded Icon Background mimicking the App Icon */}
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="relative w-64 h-64 bg-black rounded-[60px] border border-white/5 flex items-center justify-center shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] mb-12"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent rounded-[60px]" />
+          <div className="scale-[2.5]">
+            {renderIcon()}
+          </div>
+          
+          {/* Red/Blue floor glow mimicking the icon's bottom accents */}
+          <div className="absolute bottom-0 left-0 right-0 h-1/2 overflow-hidden rounded-b-[60px] pointer-events-none">
+             <div className="absolute bottom-0 left-0 w-1/2 h-4 bg-blue-600/20 blur-xl" />
+             <div className="absolute bottom-0 right-0 w-1/2 h-4 bg-red-600/20 blur-xl" />
+          </div>
+        </motion.div>
 
-        <div className="space-y-4">
-          <h1 className="text-white text-5xl lg:text-7xl font-black tracking-tight flex items-center justify-center gap-1.5 font-sans">
+        <div className="space-y-6">
+          <h1 className="text-white text-6xl lg:text-8xl font-black tracking-tighter uppercase italic leading-none">
             DENDEN
-            <span className="relative inline-block ml-2 px-4 py-1.5 bg-[#0ea5e9] text-white text-3xl lg:text-4xl font-extrabold rounded-2xl shadow-[0_4px_25px_rgba(14,165,233,0.4)] tracking-wide border border-white/10 uppercase transform -rotate-1">
-              TV
-            </span>
           </h1>
-          <p className="text-white/40 text-sm lg:text-base font-bold tracking-[0.4em] uppercase font-mono mt-4">
-            VOTRE TÉLÉVISION, SANS LIMITES
+          <div className="flex items-center justify-center gap-4">
+             <div className="h-1 w-12 bg-blue-500 rounded-full" />
+             <span className="text-4xl lg:text-5xl font-black text-blue-500 italic uppercase tracking-widest">TV</span>
+             <div className="h-1 w-12 bg-blue-500 rounded-full" />
+          </div>
+          <p className="text-white/20 text-xs lg:text-sm font-bold tracking-[0.5em] uppercase mt-8 animate-pulse">
+            L'EXPÉRIENCE ULTIME
           </p>
         </div>
       </div>
@@ -175,11 +129,18 @@ export default function DendenLogo({
 
   if (variant === 'compact') {
     return (
-      <div className={cn("flex items-center gap-2", className)}>
+      <div className={cn("flex items-center gap-3", className)}>
         {renderIcon()}
-        <span className="text-white font-black text-lg tracking-tighter">
-          DENDEN<span className="text-[#0ea5e9] font-bold ml-0.5">TV</span>
-        </span>
+        <div className="flex flex-col leading-none">
+          <span className="text-white font-black text-sm tracking-tighter uppercase italic">
+            DENDEN
+          </span>
+          <div className="flex items-center gap-1 scale-[0.6] origin-left">
+             <div className="h-0.5 w-4 bg-blue-500 rounded-full" />
+             <span className="text-blue-500 font-black not-italic tracking-widest">TV</span>
+             <div className="h-0.5 w-4 bg-blue-500 rounded-full" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -190,18 +151,17 @@ export default function DendenLogo({
       <div className="relative flex items-center">
         {renderIcon()}
         {/* Subtle backing shadow glow */}
-        <div className="absolute inset-0 bg-[#0ea5e9]/10 rounded-full blur-lg pointer-events-none" />
+        <div className="absolute inset-0 bg-[#00A8E1]/10 rounded-full blur-lg pointer-events-none" />
       </div>
       <div className="flex flex-col justify-center">
-        <h2 className="text-white text-2xl lg:text-3xl font-black tracking-tighter leading-none flex items-center gap-1.5">
+        <h2 className="text-white text-2xl lg:text-3xl font-black tracking-tighter leading-none flex flex-col italic uppercase">
           DENDEN
-          <span className="px-2.5 py-0.5 bg-[#0ea5e9] text-white text-sm lg:text-base font-extrabold rounded-lg shadow-[0_0_15px_rgba(14,165,233,0.3)] tracking-normal border border-white/5 uppercase">
-            TV
-          </span>
+          <div className="flex items-center gap-2 mt-0.5 scale-75 origin-left">
+             <div className="h-0.5 w-6 bg-blue-500 rounded-full" />
+             <span className="text-blue-500 font-black not-italic tracking-widest">TV</span>
+             <div className="h-0.5 w-6 bg-blue-500 rounded-full" />
+          </div>
         </h2>
-        <span className="text-[9px] text-white/30 font-bold uppercase tracking-[0.3em] font-mono mt-1">
-          L'EXPÉRIENCE PREMIUM
-        </span>
       </div>
     </div>
   );

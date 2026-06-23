@@ -8,6 +8,7 @@
     <!-- Favicon & PWA Icons -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
+    <meta name="apple-mobile-web-app-image" content="/favicon.svg" />
     
     <!-- PWA Manifest & Meta Tags -->
     <link rel="manifest" href="/manifest.json" />
@@ -62,23 +63,17 @@
     </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Clear out the old PWA caching service worker
+      // Register the no-op sw.js to clear out any old caching PWA behavior
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister();
-          }
-        });
-        
-        // Register the new no-op sw.js to ensure immediate override
-        if (window.location.protocol !== 'http:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
-              .then((registration) => {
-                registration.update();
-              });
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then((registration) => {
+            // Only update if it's not a fresh install, but honestly register() handles it.
+            // We'll just log success or do nothing to stay safe.
+            console.log('ServiceWorker registered');
+          }).catch((error) => {
+            console.warn('ServiceWorker registration failed:', error);
           });
-        }
+        });
       }
     </script>
   </body>

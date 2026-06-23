@@ -13,5 +13,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  event.respondWith(fetch(event.request));
+  // Transparent passthrough to allow normal browser fetching 
+  // without Service Worker intervention wrapping errors in TypeErrors.
+  return;
 });

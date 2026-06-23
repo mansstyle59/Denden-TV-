@@ -7,7 +7,7 @@ import {
   LayoutList, ListFilter, History, ChevronRight, ChevronLeft, Zap, Loader2, Tv, Calendar,
   Flame, Disc, AlertTriangle, Lock, Timer, Bell
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { cn } from '../lib/utils';
 import { Channel } from '../types';
@@ -185,6 +185,7 @@ export default function VideoPlayer({
   
   // New UI Overlays
   const [activeOverlay, setActiveOverlay] = useState<'none' | 'tech' | 'recents' | 'channels' | 'epg'>('none');
+  const [showFullEpgDetails, setShowFullEpgDetails] = useState(false);
   const [lastTapTime, setLastTapTime] = useState(0);
   const [seekFeedback, setSeekFeedback] = useState<{type: 'forward' | 'rewind' | null, visible: boolean}>({ type: null, visible: false });
   
@@ -773,8 +774,13 @@ export default function VideoPlayer({
   const nextProg = liveEpg?.next;
 
   const showTitle = currentProg?.title || liveEpg?.programmeTv?.title || `${channel.name} en Direct`;
-  const showCategory = currentProg?.category || liveEpg?.programmeTv?.time || 'Direct';
-  const showDesc = currentProg?.description || "Aucune description disponible pour ce programme.";
+  const showCategory = currentProg?.category || liveEpg?.programmeTv?.category || 'Direct';
+  const showDesc = currentProg?.description || liveEpg?.programmeTv?.desc || "Aucune description disponible pour ce programme.";
+  const showYear = currentProg?.date || liveEpg?.programmeTv?.year;
+  const showSubtitle = currentProg?.['sub-title']?.[0]?.value || liveEpg?.programmeTv?.subtitle;
+  const showDirector = currentProg?.credits?.director?.[0] || liveEpg?.programmeTv?.director;
+  const showActors = currentProg?.credits?.actor || (liveEpg?.programmeTv?.actors ? [liveEpg.programmeTv.actors] : []);
+
   const nextShowTitle = nextProg?.title || "Programme suivant";
   const nextShowTime = nextProg?.startTime ? format(new Date(nextProg.startTime), 'HH:mm') : "Bientôt";
 
@@ -1120,7 +1126,7 @@ export default function VideoPlayer({
                     )}
                     title="Fermer"
                   >
-                    <ChevronLeft size={isMobile ? 20 : 28} className="group-hover/close:-translate-x-1 transition-transform duration-300" />
+                    <X size={isMobile ? 20 : 28} className="transition-transform duration-300" />
                   </button>
                 )}
 
@@ -1202,62 +1208,149 @@ export default function VideoPlayer({
               "relative z-10 flex flex-col pointer-events-auto w-full",
               isMobile ? "p-2 gap-2 pb-4" : "p-4 md:p-6 gap-4"
             )}>
-              {/* PROFESSIONAL EPG HUD - Ultra Compact & Premium */}
+              {/* Professional EPG HUD - Ultra Compact & Premium */}
               <div className={cn(
-                "bg-[#0a0a0a]/80 backdrop-blur-3xl border border-white/10 hover:border-white/20 transition-all duration-500 rounded-[28px] md:rounded-[40px] shadow-[0_40px_80px_rgba(0,0,0,0.9)] relative overflow-hidden group/hud",
+                "bg-black/40 backdrop-blur-2xl border border-white/5 hover:border-white/20 transition-all duration-500 rounded-[28px] md:rounded-[40px] shadow-[0_40px_80px_rgba(0,0,0,0.5)] relative overflow-hidden group/hud",
                 isMobile ? "p-3 pb-2.5" : "p-4 md:p-6 mb-2"
               )}>
                 {/* Background Accent Glow */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-[100px] pointer-events-none group-hover/hud:bg-white/10 transition-colors duration-700" />
                 
-                <div className={cn("flex flex-col relative z-10", isMobile ? "gap-1.5" : "gap-4")}>
+                <div className={cn("flex flex-col relative z-10", isMobile ? "gap-1" : "gap-4")}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className={cn("flex items-center gap-2", isMobile ? "mb-1" : "mb-2")}>
                         <span className={cn(
                           "inline-flex items-center gap-1.5 font-black uppercase tracking-[0.2em] text-white/90 bg-white/10 border border-white/20 shadow-lg transition-all duration-500 group-hover/hud:border-white/40",
-                          isMobile ? "text-[9px] px-2.5 py-0.5 rounded-md" : "text-[11px] px-3 py-1 rounded-xl"
+                          isMobile ? "text-[8px] px-2 py-0.5 rounded-md" : "text-[11px] px-3 py-1 rounded-xl"
                         )}>
-                          <span className="w-1 h-1 md:w-1.5 md:h-1.5 bg-white rounded-full animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)]" /> DIRECT
+                          <span className="w-1 h-1 md:w-1.5 md:h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" /> DIRECT
                         </span>
-                        <h4 className={cn("text-white/30 font-black tracking-[0.3em] font-mono uppercase transition-colors group-hover/hud:text-white/50", isMobile ? "text-[11px]" : "text-[13px]")}>
+                        <h4 className={cn("text-white/30 font-black tracking-[0.3em] font-mono uppercase transition-colors group-hover/hud:text-white/50", isMobile ? "text-[10px]" : "text-[13px]")}>
                           {pStartText && pEndText ? `${pStartText} — ${pEndText}` : (liveEpg?.programmeTv?.time || 'PROG. LIVE')}
                         </h4>
+
+                        {!isMobile && (
+                          <button 
+                            onClick={() => setShowFullEpgDetails(!showFullEpgDetails)}
+                            className="ml-2 flex items-center gap-1.5 px-3 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-[10px] text-white/50 hover:text-white font-black uppercase tracking-widest transition-all"
+                          >
+                            <Info size={12} /> {showFullEpgDetails ? "Moins d'infos" : "Plus d'infos"}
+                          </button>
+                        )}
                       </div>
                       
                       <h2 className={cn(
                         "font-black text-white uppercase tracking-tight line-clamp-1 leading-none transition-all duration-500 group-hover/hud:tracking-normal",
-                        isMobile ? "text-lg mb-1.5" : "text-2xl md:text-4xl mb-3"
+                        isMobile ? "text-lg mb-1" : "text-2xl md:text-3xl mb-2"
                       )}>
                         {showTitle}
                       </h2>
 
-                      {isBehindLive ? (
-                         <div className={cn("flex items-center", isMobile ? "gap-1.5" : "gap-3")}>
-                           <button 
-                            onClick={catchUpToLive}
-                            className={cn(
-                              "flex items-center gap-1.5 bg-white/10 text-white border border-white/20 rounded-lg font-black uppercase tracking-widest hover:scale-105 transition-all hover:bg-white/20 active:scale-95",
-                              isMobile ? "px-2 py-1 text-[10px]" : "px-4 py-2 text-[11px]"
-                            )}
-                           >
-                            <Zap size={isMobile ? 12 : 14} fill="currentColor" /> REVENIR AU DIRECT
-                           </button>
-                           <span className={cn(
-                            "text-yellow-500 font-mono font-black tracking-widest uppercase bg-yellow-500/10 border border-yellow-500/20 rounded-lg",
-                            isMobile ? "px-2 py-1 text-[10px]" : "px-3 py-1.5 text-[12px]"
+                      <div className={cn("flex items-center flex-wrap", isMobile ? "gap-2" : "gap-3")}>
+                        {isBehindLive && (
+                           <div className="flex items-center gap-1.5">
+                             <button 
+                              onClick={catchUpToLive}
+                              className={cn(
+                                "flex items-center gap-1.5 bg-white text-black border border-white/20 rounded-lg font-black uppercase tracking-widest hover:scale-105 transition-all active:scale-95",
+                                isMobile ? "px-2 py-1 text-[9px]" : "px-3 py-1.5 text-[10px]"
+                              )}
+                             >
+                              <Zap size={isMobile ? 12 : 14} fill="currentColor" /> REVENIR AU DIRECT
+                             </button>
+                             <span className={cn(
+                              "text-amber-500 font-mono font-black tracking-widest uppercase bg-amber-500/10 border border-amber-500/20 rounded-lg",
+                              isMobile ? "px-2 py-1 text-[9px]" : "px-2 pb-1 text-[11px]"
+                            )}>
+                               DIFFÉRÉ
+                             </span>
+                           </div>
+                        )}
+                        
+                        {!isBehindLive && (
+                          <div className={cn(
+                            "text-emerald-500 font-black uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 rounded-lg",
+                            isMobile ? "px-2 py-1 text-[8px]" : "px-2.5 py-1 text-[10px]"
                           )}>
-                             {isMobile ? "DIFFÉRÉ" : `DIFFÉRÉ DE ${liveDelay} SECONDES`}
-                           </span>
-                         </div>
-                      ) : (
-                        <p className={cn(
-                          "text-white/40 font-medium tracking-tight leading-relaxed line-clamp-1 max-w-4xl italic transition-colors group-hover/hud:text-white/60",
-                          isMobile ? "text-[12px]" : "text-base md:text-lg"
-                        )}>
-                          {showDesc}
-                        </p>
-                      )}
+                             SANS DÉLAI
+                          </div>
+                        )}
+
+                        {isMobile && (
+                          <button 
+                            onClick={() => setShowFullEpgDetails(!showFullEpgDetails)}
+                            className="bg-white/5 border border-white/10 text-white/50 rounded-lg px-2 py-1 font-black uppercase text-[8px] tracking-widest"
+                          >
+                             {showFullEpgDetails ? "Masquer" : "Détails"}
+                          </button>
+                        )}
+                      </div>
+                      
+                      <AnimatePresence>
+                        {showFullEpgDetails && (
+                          <motion.div 
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="flex flex-wrap gap-2 mt-4">
+                              {showCategory && (
+                                <span className="bg-white/10 text-white/70 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border border-white/10">
+                                  {showCategory}
+                                </span>
+                              )}
+                              {showYear && (
+                                <span className="bg-white/10 text-white/70 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border border-white/10">
+                                  {showYear}
+                                </span>
+                              )}
+                              {showSubtitle && (
+                                <span className="bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border border-amber-500/20">
+                                  {showSubtitle}
+                                </span>
+                              )}
+                            </div>
+
+                            <p className={cn(
+                              "text-white/60 font-medium tracking-tight leading-relaxed mt-3 italic transition-colors border-l-2 border-white/10 pl-4 bg-white/5 p-3 rounded-r-2xl",
+                              isMobile ? "text-[11px]" : "text-sm md:text-base max-w-3xl"
+                            )}>
+                              {showDesc}
+                            </p>
+
+                            {(showDirector || (showActors && showActors.length > 0)) && (
+                              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {showDirector && (
+                                  <div className="bg-white/5 p-2.5 rounded-xl border border-white/5">
+                                    <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">Réalisateur</p>
+                                    <p className="text-white text-xs font-bold">{showDirector}</p>
+                                  </div>
+                                )}
+                                {showActors && showActors.length > 0 && (
+                                  <div className="bg-white/5 p-2.5 rounded-xl border border-white/5">
+                                    <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">Casting</p>
+                                    <p className="text-white text-xs font-bold truncate">{showActors.slice(0, 3).join(', ')}</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            {nextProg && (
+                              <div className="mt-4 flex items-center gap-4 bg-white/5 border border-white/5 p-3 rounded-2xl">
+                                <div className="w-10 h-10 bg-black/40 rounded-xl flex items-center justify-center shrink-0 border border-white/10">
+                                   <SkipForward size={14} className="text-amber-500" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-0.5">Suivant à {nextShowTime}</div>
+                                  <div className="text-white font-black text-xs uppercase tracking-tight truncate">{nextShowTitle}</div>
+                                </div>
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
 
                     {!isMobile && (
@@ -1265,10 +1358,6 @@ export default function VideoPlayer({
                         <div className="flex items-center gap-2 bg-white/5 py-1 px-3 rounded-full border border-white/10">
                            <Wifi size={12} className="text-emerald-500" />
                            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{quality}</span>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] font-mono leading-none">Prochain</div>
-                          <div className="text-white/40 font-black text-[11px] uppercase tracking-tight">{nextShowTitle}</div>
                         </div>
                       </div>
                     )}
@@ -1583,7 +1672,7 @@ export default function VideoPlayer({
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 20 }}
                   className={cn(
-                    "absolute bg-[#0a0a0a]/95 border border-white/10 rounded-[32px] md:rounded-[48px] shadow-[0_0_100px_rgba(0,0,0,1)] backdrop-blur-3xl z-[60] overflow-hidden flex flex-col",
+                    "absolute bg-black/60 border border-white/10 rounded-[32px] md:rounded-[48px] shadow-[0_0_100px_rgba(0,0,0,1)] backdrop-blur-3xl z-[60] overflow-hidden flex flex-col",
                     isMobile ? "inset-2 p-5" : "right-10 top-20 bottom-32 w-[450px] p-8"
                   )}
                 >

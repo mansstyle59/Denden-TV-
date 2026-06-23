@@ -96,6 +96,19 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
   const [search, setSearch] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
+  const [actionStatus, setActionStatus] = useState<{message: string, type: 'success' | 'error' | 'loading'} | null>(null);
+
+  const performAction = async (actionFn: () => Promise<any>, successMsg: string, errorMsg: string) => {
+    setActionStatus({ message: 'Action en cours...', type: 'loading' });
+    try {
+      await actionFn();
+      setActionStatus({ message: successMsg, type: 'success' });
+    } catch (err) {
+      console.error(err);
+      setActionStatus({ message: errorMsg, type: 'error' });
+    }
+    setTimeout(() => setActionStatus(null), 3000);
+  };
 
   const fetchStats = useCallback(async () => {
     try {
@@ -428,67 +441,54 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
       return;
     }
 
-    // Skip confirm
-    
-    setIsProcessing(true);
-    try {
-      const res = await axios.delete('/api/channels/offline');
-      // The update will happen via socket CHANNELS_SYNC
-      alert(`${res.data.deleted} chaînes supprimées avec succès.`);
-      fetchStats();
-    } catch (err) {
-      console.error(err);
-      alert('Erreur lors de la suppression des flux HS.');
-    } finally {
-      setIsProcessing(false);
-    }
+    await performAction(
+      () => axios.delete('/api/channels/offline').then(res => {
+         fetchStats();
+         return res;
+      }),
+      'Chaînes HS supprimées.',
+      'Erreur lors de la suppression.'
+    );
   };
 
   const handleDeleteAllChannels = async () => {
-    setIsProcessing(true);
-    try {
-      await axios.delete('/api/channels');
-      setSelectedChannels([]);
-      fetchStats();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsProcessing(false);
-    }
+    await performAction(
+      () => axios.delete('/api/channels').then(res => {
+         setSelectedChannels([]);
+         fetchStats();
+         return res;
+      }),
+      'Chaînes supprimées.',
+      'Erreur lors de la suppression.'
+    );
   };
 
   const handleKeepOnlyFrench = async () => {
     if (!window.confirm("Voulez-vous vraiment trier et ne garder que les chaînes en français ? Toutes les chaînes étrangères importées seront définitivement supprimées.")) {
       return;
     }
-    setIsProcessing(true);
-    try {
-      const res = await axios.post('/api/channels/keep-only-french');
-      alert(`Tri effectué ! ${res.data.deleted} chaînes étrangères supprimées. ${res.data.kept} chaînes francophones conservées.`);
-      fetchStats();
-    } catch (err) {
-      console.error(err);
-      alert('Erreur lors du tri des chaînes.');
-    } finally {
-      setIsProcessing(false);
-    }
+    await performAction(
+      () => axios.post('/api/channels/keep-only-french').then(res => {
+         fetchStats();
+         return res;
+      }),
+      'Tri effectué !',
+      'Erreur lors du tri.'
+    );
   };
 
   const handleAutoMergeDuplicates = async () => {
     if (!window.confirm("Voulez-vous fusionner automatiquement les chaînes en double (ex: TF1 SD, TF1 HD) ? Leurs adresses de flux seront combinées en secours backup pour garantir une meilleure disponibilité, et les doublons seront supprimés.")) {
       return;
     }
-    setIsProcessing(true);
-    try {
-      const res = await axios.post('/api/channels/auto-merge-duplicates');
-      alert(`Fusion réussie ! ${res.data.merged} chaînes en doublon ont été fusionnées en flux de secours backup. Il reste ${res.data.kept} chaînes uniques triées par catégorie.`);
-      fetchStats();
-    } catch (err) {
-      console.error(err);
-      alert('Erreur lors de la fusion et du tri automatique.');
-    } finally {
-      setIsProcessing(false);
-    }
+    await performAction(
+      () => axios.post('/api/channels/auto-merge-duplicates').then(res => {
+         fetchStats();
+         return res;
+      }),
+      'Fusion réussie !',
+      'Erreur lors de la fusion.'
+    );
   };
 
   const dashboardCards = [
@@ -543,6 +543,26 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
 
   return (
     <div className="space-y-6 lg:space-y-8 animate-fade-in pb-32 lg:pb-0">
+      {/* Notification Overlay */}
+      <AnimatePresence>
+          {actionStatus && (
+              <motion.div 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className={cn(
+                      "fixed top-20 right-6 z-[200] px-6 py-4 rounded-2xl border flex items-center gap-3 backdrop-blur-xl shadow-2xl",
+                      actionStatus.type === 'success' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" :
+                      actionStatus.type === 'error' ? "bg-red-500/10 border-red-500/20 text-red-500" :
+                      "bg-blue-500/10 border-blue-500/20 text-blue-500"
+                  )}
+              >
+                  {actionStatus.type === 'loading' ? <RefreshCw className="animate-spin" size={16} /> : actionStatus.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                  <span className="font-black text-xs uppercase tracking-widest">{actionStatus.message}</span>
+              </motion.div>
+          )}
+      </AnimatePresence>
+
       {/* Header Admin */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div className="flex-shrink-0">
@@ -612,15 +632,15 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                   </div>
                   
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <button onClick={() => axios.post('/api/epg/sync')} className="flex flex-col items-center justify-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-3xl border border-white/10 transition-all text-white group">
+                    <button onClick={() => performAction(() => axios.post('/api/epg/sync'), 'EPG synchronisé !', 'Erreur de sync.')} className="flex flex-col items-center justify-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-3xl border border-white/10 transition-all text-white group">
                       <RefreshCw className="group-hover:rotate-180 transition-transform duration-500" size={24} />
                       <span className="text-[9px] font-black uppercase tracking-tighter text-center">Sync EPG</span>
                     </button>
-                    <button onClick={() => axios.post('/api/channels/check')} className="flex flex-col items-center justify-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-3xl border border-white/10 transition-all text-white group">
+                    <button onClick={() => performAction(() => axios.post('/api/channels/check'), 'Flux testés.', 'Erreur de test flux.')} className="flex flex-col items-center justify-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-3xl border border-white/10 transition-all text-white group">
                       <Activity className="group-hover:scale-110 transition-transform" size={24} />
                       <span className="text-[9px] font-black uppercase tracking-tighter text-center">Tester Flux</span>
                     </button>
-                    <button onClick={() => axios.post('/api/channels/repair')} className="flex flex-col items-center justify-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-3xl border border-white/10 transition-all text-white group">
+                    <button onClick={() => performAction(() => axios.post('/api/channels/repair'), 'Base réparée.', 'Erreur de réparation.')} className="flex flex-col items-center justify-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-3xl border border-white/10 transition-all text-white group">
                       <Zap className="group-hover:text-yellow-400 group-hover:animate-pulse transition-colors" size={24} />
                       <span className="text-[9px] font-black uppercase tracking-tighter text-center">Réparer Tout</span>
                     </button>
@@ -948,20 +968,17 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                   )}
                 >
                   {/* Header */}
-                  <div className="p-5 md:p-8 border-b border-white/10 flex justify-between items-center shrink-0">
+                  <div className="p-6 md:p-8 flex justify-between items-center shrink-0">
                     <div>
-                      <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-tight flex items-center gap-3">
-                        <Radar className="text-blue-500 w-5 h-5 md:w-6 md:h-6" /> 
-                        <span className="truncate max-w-[200px] sm:max-w-none">
-                          {parsedPreviewChannels.length > 0 
-                            ? `Importation (${parsedPreviewChannels.length} chaînes)` 
-                            : 'Centre d’Importation'}
-                        </span>
-                      </h2>
-                      <p className="text-[10px] md:text-xs text-white/40 font-mono tracking-wider mt-1">
+                      <h2 className="text-xl font-bold text-white tracking-tight">
                         {parsedPreviewChannels.length > 0 
-                          ? 'SÉLECTIONNEZ ET CATÉGORISEZ' 
-                          : 'URL DISTANTE OU FICHIER LOCAL'}
+                          ? `Importation (${parsedPreviewChannels.length} chaînes)` 
+                          : 'Importer des Chaînes'}
+                      </h2>
+                      <p className="text-xs text-white/50 mt-1">
+                        {parsedPreviewChannels.length > 0 
+                          ? 'Vérifiez et importez votre sélection' 
+                          : 'Sélectionnez une source pour l\'import'}
                       </p>
                     </div>
                     <button 
@@ -972,7 +989,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                         setScanUrl('');
                         setGlobalCategoryOverride('');
                       }} 
-                      className="p-2 -mr-2 text-white/40 hover:text-white transition-colors"
+                      className="p-2 text-white/50 hover:text-white transition-colors"
                     >
                       <X size={20} />
                     </button>
@@ -980,8 +997,8 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                   
                   {/* Status Overlay */}
                   {importStatusMessage && (
-                    <div className="bg-blue-600 text-white px-5 md:px-8 py-3 text-[10px] md:text-xs font-bold uppercase tracking-widest flex items-center gap-3 shrink-0 animate-pulse">
-                      <RefreshCw className="animate-spin" size={16} />
+                    <div className="bg-blue-600/20 text-blue-400 px-6 py-3 text-xs font-medium tracking-wide flex items-center gap-3 shrink-0">
+                      <RefreshCw className="animate-spin" size={14} />
                       {importStatusMessage}
                     </div>
                   )}
@@ -989,17 +1006,17 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                   {parsedPreviewChannels.length === 0 ? (
                     /* STEP 1: CHOOSE AND PARSE SOURCE */
                     <>
-                      <div className="p-5 md:p-8 overflow-y-auto custom-scrollbar">
-                        <div className="flex flex-wrap gap-1.5 mb-6 md:mb-8 bg-white/5 p-1.5 rounded-2xl border border-white/5 mx-auto w-fit max-w-full overflow-x-auto scrollbar-hide">
+                      <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar">
+                        <div className="flex gap-2 mb-8 overflow-x-auto scrollbar-hide">
                           {(['m3u', 'xtream', 'url', 'fstv', 'witv', 'tvmio', 'local'] as const).map(t => (
                             <button
                               key={t}
                               onClick={() => setScanType(t)}
                               className={cn(
-                                "px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-wider transition-all shrink-0",
+                                "px-4 py-2 rounded-lg text-xs font-medium uppercase transition-all shrink-0 border",
                                 scanType === t 
-                                  ? "bg-blue-600 text-white shadow-lg" 
-                                  : "text-white/50 hover:text-white hover:bg-white/5"
+                                  ? "bg-white text-black border-white" 
+                                  : "text-white/40 border-white/10 hover:border-white/30"
                               )}
                             >
                               {t === 'm3u' ? 'M3U' : t === 'xtream' ? 'Xtream' : t === 'url' ? 'Simple' : t === 'fstv' ? 'FSTV' : t === 'witv' ? 'wiTV' : t === 'tvmio' ? 'TVMio' : 'Local'}
@@ -1010,19 +1027,16 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                         <div className="space-y-6">
                           {(scanType === 'm3u' || scanType === 'url') && (
                             <div className="space-y-2 animate-fade-in">
-                              <label className="text-[10px] font-black text-white/40 uppercase tracking-widest block ml-1">
-                                {scanType === 'm3u' ? 'URL de la Playlist M3U (.m3u, .m3u8, .txt)' : 'URL Directe de Flux (M3U8, MP4, TS)'}
+                              <label className="text-xs font-medium text-white/50 block">
+                                URL
                               </label>
                               <input 
                                 type="text" 
                                 placeholder="https://..." 
                                 value={scanUrl} 
                                 onChange={e => setScanUrl(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-blue-600 font-mono"
+                                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30"
                               />
-                              <p className="text-[10px] text-white/30 mt-2 ml-1">
-                                Notre proxy va récupérer et analyser la playlist à distance sans restrictions d'origine croisée (CORS).
-                              </p>
                             </div>
                           )}
 
