@@ -19,6 +19,11 @@
       "type": "image/svg+xml",
       "sizes": "512x512",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/tv-banner.svg",
+      "type": "image/svg+xml",
+      "sizes": "1280x720"
     }
   ],
   "start_url": "/",

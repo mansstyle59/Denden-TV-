@@ -54,7 +54,10 @@ var INITIAL_DATA = {
     pin: "0104",
     theme: "dark"
   },
-  epgCache: {}
+  epgCache: {},
+  epgSources: [
+    { id: "1", name: "EPG Share France", url: "https://epgshare01.online/epgshare01/epg_ripper_FR1.xml.gz", isActive: true, lastSync: null }
+  ]
 };
 function readDb() {
   try {
@@ -65,10 +68,49 @@ function readDb() {
     } else {
       data = JSON.parse(import_fs.default.readFileSync(DB_PATH, "utf-8"));
     }
+    if (!data.channels) data.channels = [];
+    if (!data.movies) data.movies = [];
+    if (!data.epgSources) data.epgSources = INITIAL_DATA.epgSources;
+    if (!data.settings) data.settings = INITIAL_DATA.settings;
     if (data && data.channels) {
+      let isAdult = function(c) {
+        if (!c) return false;
+        if (c.isPrivate) return true;
+        const name = (c.name || "").toLowerCase();
+        const cat = (c.category || "").toLowerCase();
+        const url = (c.url || "").toLowerCase();
+        return adultKeywords.some(
+          (kw) => name.includes(kw) || cat.includes(kw) || url.includes(kw) || url.includes("adult-tv-channels.click")
+        );
+      };
       const originalCount = data.channels.length;
+      const adultKeywords = [
+        "adulte",
+        "adult",
+        "xxx",
+        "sexe",
+        "charm",
+        "erotic",
+        "porn",
+        "colmax",
+        "libidin",
+        "dorcel",
+        "hustler",
+        "playboy",
+        "redlight",
+        "penthouse",
+        "beate uhse",
+        "pinko",
+        "sexy",
+        "+18",
+        "-18",
+        "vod x",
+        "film x",
+        "hentai"
+      ];
       let channels = data.channels.filter((c) => {
         if (!c) return false;
+        if (isAdult(c)) return false;
         const urlStr = c.url || "";
         const nameStr = c.name || "";
         return !urlStr.includes("test-streams.mux.dev") || nameStr.toLowerCase().includes("france 2");
@@ -225,7 +267,7 @@ async function syncEPG(io) {
   const db = readDb();
   console.log("Initiating EPG synchronization sync...");
   let newProgrammes = [];
-  for (const source of db.epgSources) {
+  for (const source of db.epgSources || []) {
     if (!source.isActive) continue;
     try {
       console.log(`Fetching EPG source: ${source.name} (${source.url})`);
@@ -385,7 +427,7 @@ async function startServer() {
       activeChannels: online + slow,
       offlineChannels: offline,
       totalCategories: db.categories.length,
-      lastEpgSync: db.epgSources.reduce((latest, s) => {
+      lastEpgSync: (db.epgSources || []).reduce((latest, s) => {
         if (!s.lastSync) return latest;
         if (!latest) return s.lastSync;
         return new Date(s.lastSync) > new Date(latest) ? s.lastSync : latest;
@@ -644,6 +686,28 @@ async function startServer() {
       ];
       cats = ["Magazine Sportif", "Football", "Sport", "Documentaire Sport"];
       progDuration = 60;
+    } else if (normName.includes("cine+ frisson") || normName.includes("cineplus frisson")) {
+      titles = [
+        "Frisson : La Nuit des Morts",
+        "Thriller : Le Silence de l'Agneau",
+        "Horreur : La Maison Hant\xE9e",
+        "Suspense : Pi\xE8ge Mortel",
+        "Action : Course contre la Mort",
+        "Fantastique : Les Ombres du Pass\xE9",
+        "Frisson : L'Attaque des Mutants",
+        "Thriller : Pacte avec le Diable",
+        "Horreur : La For\xEAt Maudite",
+        "Suspense : Le Dernier T\xE9moin"
+      ];
+      descs = [
+        "Un classique du film d'horreur pour vous faire trembler toute la nuit.",
+        "Un thriller psychologique sombre o\xF9 chaque seconde compte.",
+        "Plus jamais vous ne regarderez votre maison de la m\xEAme fa\xE7on.",
+        "Le suspense est \xE0 son comble dans ce huis clos \xE9touffant.",
+        "Adr\xE9naline pure : survivez \xE0 cette course d\xE9moniaque."
+      ];
+      cats = ["Horreur", "Thriller", "Cin\xE9-Frisson", "Suspense"];
+      progDuration = 100;
     } else if (category.includes("Cin\xE9ma") || normName.includes("cine") || normName.includes("film") || normName.includes("canal+")) {
       titles = [
         "Film : Le Destin Ultime",
@@ -743,7 +807,12 @@ async function startServer() {
     }
     let currentStart = startOfDay.getTime();
     let index = 0;
-    const endLimitTime = startOfDay.getTime() + 48 * 60 * 60 * 1e3;
+    const nowTime = now.getTime();
+    while (currentStart + progDuration * 6e4 < nowTime) {
+      currentStart += progDuration * 6e4;
+      index++;
+    }
+    const endLimitTime = currentStart + 48 * 60 * 60 * 1e3;
     while (currentStart < endLimitTime) {
       const t = titles[index % titles.length];
       const d = descs[index % descs.length];
@@ -771,7 +840,10 @@ async function startServer() {
     const ptvData = await scrapeProgrammeTv();
     for (const channel of db.channels) {
       const norm = normalizeChannelName(channel.name);
-      const progs = findCorrectEpgProgs(channel);
+      let progs = findCorrectEpgProgs(channel);
+      if (progs.length === 0) {
+        progs = generateFallbackEpgForChannel(channel.name, channel.category || "", now);
+      }
       let current = null;
       let next = null;
       for (let i = 0; i < progs.length; i++) {
@@ -2105,26 +2177,8 @@ async function startServer() {
     console.log("Executing Background Auto-Healing sweep (including Private Zone cleanup)...");
     import_axios.default.post(`http://localhost:${PORT}/api/channels/repair`).catch(() => {
     });
-    try {
-      const db = readDb();
-      const privateChannels = db.channels.filter((c) => c.isPrivate);
-      const toDelete = [];
-      for (const channel of privateChannels) {
-        const stats = await checkStream(channel.url);
-        if (stats.status === "offline") {
-          console.log(`[Auto-Cleanup] Private channel ${channel.name} is Offline/HS. Adding to deletion list.`);
-          toDelete.push(channel.id);
-        }
-      }
-      if (toDelete.length > 0) {
-        db.channels = db.channels.filter((c) => !toDelete.includes(c.id));
-        writeDb(db);
-        io.emit("CHANNELS_SYNC", db.channels);
-        console.log(`[Auto-Cleanup] Successfully removed ${toDelete.length} defunct private channels.`);
-      }
-    } catch (err) {
-      console.error("[Auto-Cleanup] Private zone sweep failed");
-    }
+    import_axios.default.post(`http://localhost:${PORT}/api/channels/repair`).catch(() => {
+    });
   }, 1 * 60 * 60 * 1e3);
 }
 process.on("uncaughtException", (err) => {
