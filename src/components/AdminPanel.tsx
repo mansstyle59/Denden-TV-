@@ -11,7 +11,8 @@ import {
 import { Channel, Category, EPGSource } from '../types';
 import { cn } from '../lib/utils';
 import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'sonner';
 import { useDeviceType } from '../hooks/useDeviceType';
 
 interface AdminPanelProps {
@@ -148,7 +149,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
     if (pinInput === '0104') {
       setIsUnlocked(true);
     } else {
-      alert('Code PIN incorrect.');
+      toast.error('Code PIN incorrect.');
       setPinInput('');
     }
   };
@@ -168,7 +169,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
       setFormData({ name: '', logo: '', url: '', category: 'Généralistes', isEnabled: true });
     } catch (err) {
       console.error(err);
-      alert('Erreur lors de l’enregistrement.');
+      toast.error('Erreur lors de l’enregistrement.');
     } finally {
       setIsProcessing(false);
     }
@@ -186,7 +187,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
       const res = await axios.post(`/api/channels/duplicate/${id}`);
       onAddChannel(res.data);
     } catch (err) {
-      alert('Erreur de duplication');
+      toast.error('Erreur de duplication');
     } finally {
       setIsProcessing(false);
     }
@@ -217,7 +218,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
       setIsAddingCategory(false);
       setEditingCategoryId(null);
     } catch (err) {
-      alert('Erreur catégorie');
+      toast.error('Erreur catégorie');
     } finally {
       setIsProcessing(false);
     }
@@ -229,12 +230,12 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
       await axios.delete(`/api/categories/${id}`);
       fetchCategories();
     } catch (err) {
-      alert('Erreur suppression');
+      toast.error('Erreur suppression');
     }
   };
 
   const handleLogoSearch = async () => {
-    if (!formData.name) return alert('Entrez d\'abord le nom de la chaîne');
+    if (!formData.name) return toast.warning('Entrez d\'abord le nom de la chaîne');
     setIsProcessing(true);
     try {
       // Simulation d'une recherche automatique
@@ -251,7 +252,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
       await axios.post('/api/epg/sources/toggle', { index });
       fetchEpgSources();
     } catch (err) {
-      alert('Erreur lors de la mise à jour.');
+      toast.error('Erreur lors de la mise à jour.');
     }
   };
 
@@ -259,30 +260,30 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
     if (scanType === 'm3u' || scanType === 'url') {
       await handleAnalyzeUrl();
     } else if (scanType === 'fstv') {
-      if (!scanUrl) return alert('Veuillez entrer une URL.');
+      if (!scanUrl) return toast.warning('Veuillez entrer une URL.');
       setIsProcessing(true);
       try {
         const res = await axios.post('/api/channels/scrape-fstv', { url: scanUrl });
-        alert(`Chaîne ${res.data.channel.name} ajoutée via FSTV Scraper.`);
+        toast.success(`Chaîne ${res.data.channel.name} ajoutée via FSTV Scraper.`);
         setIsScanning(false);
         setScanUrl('');
         fetchStats();
       } catch (err) {
-        alert('Erreur lors du scrap.');
+        toast.error('Erreur lors du scrap (FSTV).');
       } finally {
         setIsProcessing(false);
       }
     } else if (scanType === 'witv') {
-      if (!scanUrl) return alert('Veuillez entrer une URL.');
+      if (!scanUrl) return toast.warning('Veuillez entrer une URL.');
       setIsProcessing(true);
       try {
         const res = await axios.post('/api/channels/scrape-witv', { url: scanUrl });
-        alert(`Chaîne ${res.data.channel.name} ajoutée via wiTV Scraper.`);
+        toast.success(`Chaîne ${res.data.channel.name} ajoutée via wiTV Scraper.`);
         setIsScanning(false);
         setScanUrl('');
         fetchStats();
       } catch (err) {
-        alert('Erreur lors du scrap.');
+        toast.error('Erreur lors du scrap (wiTV).');
       } finally {
         setIsProcessing(false);
       }
@@ -290,11 +291,11 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
       setIsProcessing(true);
       try {
         const res = await axios.post('/api/channels/import-tvmio');
-        alert(`${res.data.count} nouvelles chaînes TVMio importées (${res.data.totalInCatalog} au total).`);
+        toast.success(`${res.data.count} nouvelles chaînes TVMio importées (${res.data.totalInCatalog} au total).`);
         setIsScanning(false);
         fetchStats();
       } catch (err) {
-        alert('Erreur lors de l’importation TVMio.');
+        toast.error('Erreur lors de l’importation TVMio.');
       } finally {
         setIsProcessing(false);
       }
@@ -304,7 +305,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
       } else if (localFile) {
         handleLocalFile(localFile);
       } else {
-        alert('Veuillez d’abord sélectionner un fichier M3U.');
+        toast.warning('Veuillez d’abord sélectionner un fichier M3U.');
       }
     }
   };
@@ -357,7 +358,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
           setChannelsToImport(items.map(item => item.url));
           setCurrentPage(1);
         } catch (err) {
-          alert("Erreur lors de la lecture ou l'analyse du fichier.");
+          toast.error("Erreur lors de la lecture ou l'analyse du fichier.");
         } finally {
           setIsProcessing(false);
           setImportStatusMessage('');
@@ -365,7 +366,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
       }
     };
     reader.onerror = () => {
-      alert("Erreur de lecture du fichier.");
+      toast.error("Erreur de lecture du fichier.");
       setIsProcessing(false);
       setImportStatusMessage('');
     };
@@ -373,21 +374,21 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
   };
 
   const handleAnalyzeUrl = async () => {
-    if (!scanUrl) return alert('Veuillez entrer une URL.');
+    if (!scanUrl) return toast.warning('Veuillez entrer une URL.');
     setIsProcessing(true);
     setImportStatusMessage('Téléchargement et analyse de la playlist distante...');
     try {
       const res = await axios.post('/api/playlists/parse', { url: scanUrl });
       const items = res.data.channels || [];
       if (items.length === 0) {
-        alert('Aucune chaîne trouvée dans cette playlist.');
+        toast.warning('Aucune chaîne trouvée dans cette playlist.');
       } else {
         setParsedPreviewChannels(items);
         setChannelsToImport(items.map((item: any) => item.url));
         setCurrentPage(1);
       }
     } catch (err: any) {
-      alert(err.response?.data?.error || "Erreur lors du téléchargement. Veuillez vérifier l'URL de votre playlist.");
+      toast.error(err.response?.data?.error || "Erreur lors du téléchargement. Veuillez vérifier l'URL de votre playlist.");
     } finally {
       setIsProcessing(false);
       setImportStatusMessage('');
@@ -408,14 +409,14 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
         }));
 
       if (selectedItems.length === 0) {
-        alert('Aucune chaîne sélectionnée pour l\'importation.');
+        toast.warning('Aucune chaîne sélectionnée pour l\'importation.');
         setIsProcessing(false);
         setImportStatusMessage('');
         return;
       }
 
       const res = await axios.post('/api/channels/bulk', selectedItems);
-      alert(`${res.data.count} chaînes importées avec succès !`);
+      toast.success(`${res.data.count} chaînes importées avec succès !`);
       
       // Close modal & reset
       setIsScanning(false);
@@ -427,7 +428,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
       fetchStats();
     } catch (err) {
       console.error(err);
-      alert("Erreur lors de l'importation de la playlist.");
+      toast.error("Erreur lors de l'importation de la playlist.");
     } finally {
       setIsProcessing(false);
       setImportStatusMessage('');
@@ -437,7 +438,7 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
   const handleDeleteOffline = async () => {
     const offlineCount = channels.filter(c => c.status === 'offline').length;
     if (offlineCount === 0) {
-      alert('Aucune chaîne n\'est actuellement hors-service.');
+      toast.info('Aucune chaîne n\'est actuellement hors-service.');
       return;
     }
 
@@ -635,6 +636,10 @@ export default function AdminPanel({ channels, onAddChannel, onUpdateChannel, on
                     <button onClick={() => performAction(() => axios.post('/api/epg/sync'), 'EPG synchronisé !', 'Erreur de sync.')} className="flex flex-col items-center justify-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-3xl border border-white/10 transition-all text-white group">
                       <RefreshCw className="group-hover:rotate-180 transition-transform duration-500" size={24} />
                       <span className="text-[9px] font-black uppercase tracking-tighter text-center">Sync EPG</span>
+                    </button>
+                    <button onClick={() => performAction(() => axios.post('/api/pluto/sync'), 'Pluto TV Synchronisé !', 'Erreur de sync Pluto.')} className="flex flex-col items-center justify-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-3xl border border-white/10 transition-all text-white group">
+                      <Tv className="group-hover:scale-110 transition-transform text-teal-400" size={24} />
+                      <span className="text-[9px] font-black uppercase tracking-tighter text-center text-teal-400">Sync Pluto TV</span>
                     </button>
                     <button onClick={() => performAction(() => axios.post('/api/channels/check'), 'Flux testés.', 'Erreur de test flux.')} className="flex flex-col items-center justify-center gap-3 p-4 bg-white/5 hover:bg-white/10 rounded-3xl border border-white/10 transition-all text-white group">
                       <Activity className="group-hover:scale-110 transition-transform" size={24} />

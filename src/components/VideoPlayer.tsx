@@ -7,7 +7,7 @@ import {
   LayoutList, ListFilter, History, ChevronRight, ChevronLeft, Zap, Loader2, Tv, Calendar,
   Flame, Disc, AlertTriangle, Lock, Timer, Bell
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
 import { cn } from '../lib/utils';
 import { Channel } from '../types';
@@ -566,7 +566,7 @@ export default function VideoPlayer({
         hlsRef.current.destroy();
       }
       const hlsOptions: any = {
-        enableWorker: true,
+        enableWorker: false,
         backBufferLength: 60,
         maxAudioFramesDrift: 1, // Minimize audio drift
         stretchShortVideoTrack: true, // Help when audio is longer than video

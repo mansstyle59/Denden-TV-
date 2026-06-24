@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Home, Tv2, Search, Clapperboard, SlidersHorizontal, KeyRound } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { DeviceType } from '../hooks/useDeviceType';
 import DendenLogo from './DendenLogo';
@@ -71,7 +71,7 @@ function NavigationButtonWithLongPress({ onClick, onLongPress, className, style,
 const defaultMenuItems = [
   { id: 'home', icon: Home, label: 'Accueil' },
   { id: 'channels', icon: Tv2, label: 'Chaînes' },
-  { id: 'movies', icon: Clapperboard, label: 'Films' },
+  { id: 'movies', icon: Clapperboard, label: 'Films & Séries' },
   { id: 'search', icon: Search, label: 'Recherche' },
 ];
 
@@ -122,12 +122,12 @@ export default function Navigation({ activeSection, onSectionChange, isCollapsed
 
   return (
     <nav className={cn(
-      "bg-black/40 backdrop-blur-3xl border-r border-white/5 flex flex-col transition-all duration-300 z-50 select-none relative",
+      "bg-[#0c0c0e]/95 backdrop-blur-3xl border-r border-white/5 flex flex-col transition-all duration-300 z-50 select-none relative",
       deviceType === 'tv' ? "w-80" : (isCollapsed ? "w-20" : "w-64")
     )}>
-      <div className="absolute top-0 left-0 w-full h-[300px] bg-gradient-to-b from-red-650/5 to-transparent pointer-events-none" />
+      <div className="absolute top-0 left-0 w-full h-[300px] bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
       
-      <div className="p-8 relative z-10 border-b border-white/5 bg-black/40">
+      <div className="p-8 relative z-10 border-b border-white/5 bg-transparent flex justify-center lg:justify-start">
         {isCollapsed && deviceType !== 'tv' ? (
           <DendenLogo variant="icon-only" size={32} />
         ) : (
@@ -135,7 +135,7 @@ export default function Navigation({ activeSection, onSectionChange, isCollapsed
         )}
       </div>
 
-      <div className="flex-1 px-5 space-y-3 mt-8 overflow-y-auto scrollbar-hide relative z-10 w-full">
+      <div className="flex-1 px-4 space-y-2 mt-8 overflow-y-auto scrollbar-hide relative z-10 w-full">
         {menuItems.map((item) => {
           const isActive = activeSection === item.id;
           return (
@@ -143,24 +143,21 @@ export default function Navigation({ activeSection, onSectionChange, isCollapsed
               key={item.id}
               onClick={() => onSectionChange(item.id)}
               className={cn(
-                "w-full flex items-center px-4 py-4 rounded-2xl transition-all font-bold text-xs uppercase tracking-widest focus:outline-none relative overflow-hidden group cursor-pointer",
-                isActive ? "text-white" : "text-white/40 hover:text-white"
+                "w-full flex items-center px-4 py-3.5 rounded-xl transition-all font-medium text-sm focus:outline-none relative overflow-hidden group cursor-pointer",
+                isActive ? "text-black bg-white" : "text-white/60 hover:text-white hover:bg-white/5"
               )}
             >
               {isActive && (
                 <motion.div
                   layoutId="desktop-nav-indicator"
-                  className="absolute inset-0 bg-red-600/10 rounded-2xl border border-red-500/20"
+                  className="absolute inset-0 bg-white rounded-xl"
                   transition={{ type: "spring", stiffness: 350, damping: 25 }}
                 />
               )}
-              {!isActive && (
-                <div className="absolute inset-0 bg-white/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              )}
               
               <div className="relative z-10 flex items-center gap-4 w-full">
-                <div className={cn("transition-all duration-300", isActive ? "text-red-500 scale-110 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]" : "group-hover:scale-105")}>
-                  <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} className="flex-shrink-0" />
+                <div className={cn("transition-all duration-300", isActive ? "text-black" : "group-hover:scale-105")}>
+                  <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} className="flex-shrink-0" />
                 </div>
                 {(!isCollapsed || deviceType === 'tv') && <span className="truncate">{item.label}</span>}
               </div>
@@ -169,27 +166,24 @@ export default function Navigation({ activeSection, onSectionChange, isCollapsed
         })}
       </div>
 
-      <div className="p-6 relative z-10 border-t border-white/5 mt-auto bg-black/20">
+      <div className="p-4 relative z-10 border-t border-white/5 mt-auto">
         <button
           onClick={() => onSectionChange('settings')}
           className={cn(
-            "w-full flex items-center px-4 py-4 rounded-2xl transition-all font-bold text-xs uppercase tracking-widest relative overflow-hidden group cursor-pointer",
-            activeSection === 'settings' ? "text-white" : "text-white/40 hover:text-white"
+            "w-full flex items-center px-4 py-3.5 rounded-xl transition-all font-medium text-sm relative overflow-hidden group cursor-pointer",
+            activeSection === 'settings' ? "text-black bg-white" : "text-white/60 hover:text-white hover:bg-white/5"
           )}
         >
           {activeSection === 'settings' && (
             <motion.div
               layoutId="desktop-nav-indicator"
-              className="absolute inset-0 bg-red-600/10 rounded-2xl border border-red-500/20"
+              className="absolute inset-0 bg-white rounded-xl"
               transition={{ type: "spring", stiffness: 350, damping: 25 }}
             />
           )}
-          {activeSection !== 'settings' && (
-             <div className="absolute inset-0 bg-white/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          )}
           <div className="relative z-10 flex items-center gap-4 w-full">
-            <div className={cn("transition-all duration-300", activeSection === 'settings' ? "text-red-500 scale-110 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]" : "group-hover:rotate-45")}>
-              <SlidersHorizontal size={22} strokeWidth={activeSection === 'settings' ? 2.5 : 2} className="flex-shrink-0" />
+            <div className={cn("transition-all duration-300", activeSection === 'settings' ? "text-black" : "group-hover:rotate-45")}>
+              <SlidersHorizontal size={20} strokeWidth={activeSection === 'settings' ? 2.5 : 2} className="flex-shrink-0" />
             </div>
             {(!isCollapsed || deviceType === 'tv') && <span>Réglages</span>}
           </div>

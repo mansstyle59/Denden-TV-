@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Film, Plus, X, Search, Trash2, Sliders, CheckCircle, Loader2, ArrowLeft,
   Database, Info, AlertTriangle, Play, Globe, Star, AppWindow, Eye, 

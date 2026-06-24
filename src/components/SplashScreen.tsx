@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import DendenLogo from './DendenLogo';
+import React, { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import DendenLogo from "./DendenLogo";
 
 export default function SplashScreen({ onFinish }: { onFinish: () => void }) {
   const [show, setShow] = useState(true);
@@ -8,10 +8,10 @@ export default function SplashScreen({ onFinish }: { onFinish: () => void }) {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShow(false);
-      setTimeout(onFinish, 600); // Increased smoothness
+      setTimeout(onFinish, 800); // Crossfade transition
     }, 2800);
     return () => clearTimeout(timer);
-  }, []);
+  }, [onFinish]);
 
   return (
     <AnimatePresence>
@@ -19,39 +19,22 @@ export default function SplashScreen({ onFinish }: { onFinish: () => void }) {
         <motion.div
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.6 }}
-          className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-6 overflow-hidden"
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          className="fixed inset-0 z-[100] bg-[#050505] flex flex-col items-center justify-center overflow-hidden"
         >
-          {/* Subtle Dynamic Background Decoration */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1.2 }}
-            transition={{ duration: 3, ease: "easeInOut" }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-650/10 rounded-full blur-[120px] pointer-events-none"
-          />
+          <DendenLogo variant="splash" size={140} animate />
           
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-10"
-          >
-            <DendenLogo variant="splash" size={90} animate />
-          </motion.div>
-
-          {/* Elegant Pulse Loader */}
-          <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: "240px", opacity: 1 }}
-            transition={{ delay: 0.6, duration: 1.2, ease: "easeOut" }}
-            className="h-[1px] bg-white/10 mt-12 rounded-full relative overflow-hidden"
-          >
-            <motion.div
-              animate={{ x: ["-100%", "100%"] }}
-              transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
-              className="absolute inset-0 bg-red-650 shadow-[0_0_15px_rgba(14,165,233,0.8)]"
-            />
-          </motion.div>
+            initial={{ opacity: 0.4 }}
+            animate={{ opacity: 1 }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              repeatType: "reverse",
+              ease: "easeInOut",
+            }}
+            className="mt-8 w-10 h-0.5 bg-[#00A8FF] rounded-full shadow-[0_0_8px_rgba(0,168,255,0.5)]"
+          />
         </motion.div>
       )}
     </AnimatePresence>

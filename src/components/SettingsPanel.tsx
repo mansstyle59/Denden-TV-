@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Tv, Zap, Calendar, RefreshCw, Sliders, Shield, Database, 
   CheckCircle, AlertTriangle, ShieldCheck, ArrowRight, Loader2, Play, Lock, Eye, EyeOff,
