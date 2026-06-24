@@ -239,7 +239,7 @@ export default function TubiPage({
 
           {/* LIST OF ITEMS */}
           <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-4">
               {filteredChannels.map((channel) => {
                 const isSelected = selectedChannel?.id === channel.id;
 

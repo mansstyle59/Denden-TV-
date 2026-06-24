@@ -652,7 +652,7 @@ export default function PlutoTVPage({
             {activeTab === 'live' ? (
               // LIVE CHANNELS EPG ROW LIST
               filteredChannels.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-4">
                   {filteredChannels.map((channel) => {
                     const isSelected = selectedChannel?.id === channel.id;
 
@@ -697,7 +697,7 @@ export default function PlutoTVPage({
             ) : (
               // VOD MOVIES GRID LIST
               filteredMovies.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-4">
                   {filteredMovies.map((movie) => {
                     const isSelected = selectedVodMovie?.id === movie.id;
                     return (

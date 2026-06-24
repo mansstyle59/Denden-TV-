@@ -35,7 +35,7 @@ export default function ChannelGrid({
     <div
       className={cn(
         "grid w-full gap-3 md:gap-4",
-        "grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5",
+        "grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5",
       )}
     >
       {channels.map((channel, i) => {
@@ -52,7 +52,7 @@ export default function ChannelGrid({
               onClick={onChannelSelect}
               onLongPress={onChannelLongPress}
               className={cn(
-                "group relative bg-[#0c0c0e] border border-white/5 cursor-pointer rounded-xl md:rounded-2xl overflow-hidden flex flex-col aspect-[4/3] transition-all duration-300",
+                "group relative bg-[#0c0c0e] border border-white/5 cursor-pointer rounded-xl md:rounded-2xl overflow-hidden flex flex-col aspect-square md:aspect-[4/3] transition-all duration-300",
                 "focus:border-[#00A8E1]/50 focus:shadow-[0_10px_30px_rgba(0,168,225,0.15)] hover:border-[#00A8E1]/50 hover:shadow-[0_10px_30px_rgba(0,168,225,0.15)] hover:bg-[#111]",
               )}
             >
@@ -80,30 +80,32 @@ export default function ChannelGrid({
                       <img
                         src={channel.logo}
                         alt=""
-                        className="absolute left-3 top-3 h-10 md:h-12 max-w-[50%] object-contain filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.9)] z-20 brightness-110"
+                        className="absolute left-1.5 top-1.5 md:left-3 md:top-3 h-6 md:h-12 max-w-[50%] object-contain filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.9)] z-20 brightness-110"
                         referrerPolicy="no-referrer"
                       />
                     )}
                   </>
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center p-4 bg-gradient-to-br from-[#151515] to-[#080808]">
+                  <div className="absolute inset-0 flex items-center justify-center p-2 md:p-4 bg-gradient-to-br from-[#151515] to-[#080808]">
                     {channel.logo ? (
-                      <img
-                        src={channel.logo}
-                        alt={channel.name}
-                        className="w-[80%] h-[80%] object-contain relative z-20 filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.6)] opacity-90 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300"
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                      />
+                      <div className="w-[80%] h-[80%] flex items-center justify-center bg-white/5 backdrop-blur-xl rounded-xl p-3 shadow-[inset_0_1px_3px_rgba(255,255,255,0.1)] group-hover:bg-white/10 transition-colors duration-300">
+                        <img
+                          src={channel.logo}
+                          alt={channel.name}
+                          className="w-full h-full object-contain relative z-20 filter drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] opacity-95 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300"
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center relative z-20 opacity-30 group-hover:opacity-60 transition-opacity">
                         <Tv
                           className={cn(
-                            "text-white mb-2 group-hover:text-[#00A8E1] transition-colors",
-                            isMobile ? "w-6 h-6" : "w-10 h-10",
+                            "text-white mb-1 md:mb-2 group-hover:text-[#00A8E1] transition-colors",
+                            isMobile ? "w-4 h-4" : "w-10 h-10",
                           )}
                         />
-                        <span className="text-white/50 font-black uppercase tracking-widest text-center truncate px-2 text-[10px] w-full">
+                        <span className="text-white/50 font-black uppercase tracking-widest text-center line-clamp-2 md:truncate px-1 md:px-2 text-[8px] md:text-[10px] w-full">
                           {channel.name}
                         </span>
                       </div>

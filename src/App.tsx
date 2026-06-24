@@ -517,27 +517,27 @@ export default function App() {
                   Spéciaux
                 </h3>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-3 md:gap-4">
+                <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-5 gap-3 md:gap-4">
                   {/* Pluto TV */}
                   <div
                     onClick={() => handleSectionChange("pluto")}
-                    className="group relative overflow-hidden rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-[#170F2E] via-[#0D0A1B] to-[#12003C] p-6 hover:border-yellow-500/50 transition-all cursor-pointer shadow-lg hover:shadow-yellow-500/20"
+                    className="group col-span-1 relative overflow-hidden rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-[#170F2E] via-[#0D0A1B] to-[#12003C] p-3 md:p-6 hover:border-yellow-500/50 transition-all cursor-pointer shadow-lg hover:shadow-yellow-500/20"
                   >
                     <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-500/10 rounded-full blur-[40px] group-hover:bg-yellow-500/20 transition-all pointer-events-none" />
-                    <div className="flex flex-col gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-black border border-white/10 p-2 flex items-center justify-center shadow-lg">
-                        <span className="text-xl font-black text-yellow-400 tracking-tighter">
+                    <div className="flex flex-col gap-2 md:gap-4 items-center md:items-start text-center md:text-left">
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-black border border-white/10 p-2 flex items-center justify-center shadow-lg">
+                        <span className="text-base md:text-xl font-black text-yellow-400 tracking-tighter">
                           P.
                         </span>
                       </div>
                       <div>
-                        <span className="bg-gradient-to-r from-violet-650 to-yellow-500 text-white px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded inline-block mb-2">
+                        <span className="hidden md:inline-block bg-gradient-to-r from-violet-650 to-yellow-500 text-white px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded mb-2">
                           PLUTO TV
                         </span>
-                        <h3 className="text-lg font-black text-white tracking-tight leading-tight">
-                          Pack Pluto France
+                        <h3 className="text-[10px] md:text-lg font-black text-white tracking-tight leading-tight">
+                          Pluto TV
                         </h3>
-                        <p className="text-white/50 text-xs font-medium mt-1 line-clamp-2">
+                        <p className="text-white/50 text-xs font-medium mt-1 line-clamp-2 hidden md:block">
                           42 chaînes culte de Pluto TV avec logos originaux.
                         </p>
                       </div>
@@ -547,23 +547,23 @@ export default function App() {
                   {/* Tubi TV */}
                   <div
                     onClick={() => handleSectionChange("tubi")}
-                    className="group relative overflow-hidden rounded-2xl border border-sky-500/20 bg-gradient-to-br from-[#0C1A2E] via-[#080D1B] to-[#040C1C] p-6 hover:border-sky-500/50 transition-all cursor-pointer shadow-lg hover:shadow-sky-500/20"
+                    className="group col-span-1 relative overflow-hidden rounded-2xl border border-sky-500/20 bg-gradient-to-br from-[#0C1A2E] via-[#080D1B] to-[#040C1C] p-3 md:p-6 hover:border-sky-500/50 transition-all cursor-pointer shadow-lg hover:shadow-sky-500/20"
                   >
                     <div className="absolute -top-10 -right-10 w-32 h-32 bg-sky-500/10 rounded-full blur-[40px] group-hover:bg-sky-500/20 transition-all pointer-events-none" />
-                    <div className="flex flex-col gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-black border border-white/10 p-2 flex items-center justify-center shadow-lg">
-                        <span className="text-xl font-black text-sky-400 tracking-tighter">
+                    <div className="flex flex-col gap-2 md:gap-4 items-center md:items-start text-center md:text-left">
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-black border border-white/10 p-2 flex items-center justify-center shadow-lg">
+                        <span className="text-base md:text-xl font-black text-sky-400 tracking-tighter">
                           T.
                         </span>
                       </div>
                       <div>
-                        <span className="bg-gradient-to-r from-sky-600 to-blue-500 text-white px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded inline-block mb-2">
+                        <span className="hidden md:inline-block bg-gradient-to-r from-sky-600 to-blue-500 text-white px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded mb-2">
                           TUBI TV
                         </span>
-                        <h3 className="text-lg font-black text-white tracking-tight leading-tight">
-                          Tubi Sélection
+                        <h3 className="text-[10px] md:text-lg font-black text-white tracking-tight leading-tight">
+                          Tubi TV
                         </h3>
-                        <p className="text-white/50 text-xs font-medium mt-1 line-clamp-2">
+                        <p className="text-white/50 text-xs font-medium mt-1 line-clamp-2 hidden md:block">
                           Films et séries en streaming illimité.
                         </p>
                       </div>
@@ -573,23 +573,23 @@ export default function App() {
                   {/* Plex TV */}
                   <div
                     onClick={() => handleSectionChange("plex")}
-                    className="group relative overflow-hidden rounded-2xl border border-orange-500/20 bg-gradient-to-br from-[#2E1A0C] via-[#1B0D08] to-[#1C0C04] p-6 hover:border-orange-500/50 transition-all cursor-pointer shadow-lg hover:shadow-orange-500/20"
+                    className="group col-span-1 relative overflow-hidden rounded-2xl border border-orange-500/20 bg-gradient-to-br from-[#2E1A0C] via-[#1B0D08] to-[#1C0C04] p-3 md:p-6 hover:border-orange-500/50 transition-all cursor-pointer shadow-lg hover:shadow-orange-500/20"
                   >
                     <div className="absolute -top-10 -right-10 w-32 h-32 bg-orange-500/10 rounded-full blur-[40px] group-hover:bg-orange-500/20 transition-all pointer-events-none" />
-                    <div className="flex flex-col gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-black border border-white/10 p-2 flex items-center justify-center shadow-lg">
-                        <span className="text-xl font-black text-orange-400 tracking-tighter">
+                    <div className="flex flex-col gap-2 md:gap-4 items-center md:items-start text-center md:text-left">
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-black border border-white/10 p-2 flex items-center justify-center shadow-lg">
+                        <span className="text-base md:text-xl font-black text-orange-400 tracking-tighter">
                           Px.
                         </span>
                       </div>
                       <div>
-                        <span className="bg-gradient-to-r from-orange-600 to-yellow-600 text-white px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded inline-block mb-2">
+                        <span className="hidden md:inline-block bg-gradient-to-r from-orange-600 to-yellow-600 text-white px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded mb-2">
                           PLEX TV
                         </span>
-                        <h3 className="text-lg font-black text-white tracking-tight leading-tight">
-                          Plex Channels
+                        <h3 className="text-[10px] md:text-lg font-black text-white tracking-tight leading-tight">
+                          Plex TV
                         </h3>
-                        <p className="text-white/50 text-xs font-medium mt-1 line-clamp-2">
+                        <p className="text-white/50 text-xs font-medium mt-1 line-clamp-2 hidden md:block">
                           Sélection de flux exclusifs en direct.
                         </p>
                       </div>
@@ -599,23 +599,23 @@ export default function App() {
                   {/* Samsung TV+ */}
                   <div
                     onClick={() => handleSectionChange("samsung")}
-                    className="group relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-[#0C152E] via-[#080B1B] to-[#04081C] p-6 hover:border-blue-500/50 transition-all cursor-pointer shadow-lg hover:shadow-blue-500/20"
+                    className="group col-span-1 relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-[#0C152E] via-[#080B1B] to-[#04081C] p-3 md:p-6 hover:border-blue-500/50 transition-all cursor-pointer shadow-lg hover:shadow-blue-500/20"
                   >
                     <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-[40px] group-hover:bg-blue-500/20 transition-all pointer-events-none" />
-                    <div className="flex flex-col gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-black border border-white/10 p-2 flex items-center justify-center shadow-lg">
-                        <span className="text-xl font-black text-blue-400 tracking-tighter">
+                    <div className="flex flex-col gap-2 md:gap-4 items-center md:items-start text-center md:text-left">
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-black border border-white/10 p-2 flex items-center justify-center shadow-lg">
+                        <span className="text-base md:text-xl font-black text-blue-400 tracking-tighter">
                           S+
                         </span>
                       </div>
                       <div>
-                        <span className="bg-gradient-to-r from-blue-600 to-sky-600 text-white px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded inline-block mb-2">
+                        <span className="hidden md:inline-block bg-gradient-to-r from-blue-600 to-sky-600 text-white px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded mb-2">
                           SAMSUNG TV+
                         </span>
-                        <h3 className="text-lg font-black text-white tracking-tight leading-tight">
-                          Samsung Direct
+                        <h3 className="text-[10px] md:text-lg font-black text-white tracking-tight leading-tight">
+                          Samsung TV+
                         </h3>
-                        <p className="text-white/50 text-xs font-medium mt-1 line-clamp-2">
+                        <p className="text-white/50 text-xs font-medium mt-1 line-clamp-2 hidden md:block">
                           Chaînes exclusives Samsung en continu.
                         </p>
                       </div>
@@ -625,44 +625,42 @@ export default function App() {
                   {/* Sport */}
                   <div
                     onClick={() => handleSectionChange("sport")}
-                    className="group relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-[#0F2E1B] via-[#0A1A12] to-[#041208] p-6 hover:border-emerald-500/50 transition-all cursor-pointer shadow-lg hover:shadow-emerald-500/20"
+                    className="group col-span-4 md:col-span-1 relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-[#0F2E1B] via-[#0A1A12] to-[#041208] p-4 md:p-6 hover:border-emerald-500/50 transition-all cursor-pointer shadow-lg hover:shadow-emerald-500/20 flex flex-row md:flex-col items-center md:items-start gap-4 md:gap-4"
                   >
                     <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-[40px] group-hover:bg-emerald-500/20 transition-all pointer-events-none" />
-                    <div className="flex flex-col gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-black border border-white/10 p-2 flex items-center justify-center shadow-lg">
-                        <div className="text-xl font-black text-emerald-400 tracking-tighter group-hover:animate-pulse">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="mx-auto"
-                          >
-                            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-                            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-                            <path d="M4 22h16" />
-                            <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
-                            <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
-                            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
-                          </svg>
-                        </div>
+                    <div className="w-12 h-12 md:w-12 md:h-12 rounded-xl bg-black border border-white/10 p-2 flex items-center justify-center shadow-lg shrink-0">
+                      <div className="text-xl font-black text-emerald-400 tracking-tighter group-hover:animate-pulse">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="mx-auto"
+                        >
+                          <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                          <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                          <path d="M4 22h16" />
+                          <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                          <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                          <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                        </svg>
                       </div>
-                      <div>
-                        <span className="bg-gradient-to-r from-teal-600 to-emerald-500 text-white px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded inline-block mb-2">
-                          LIVE SPORTS
-                        </span>
-                        <h3 className="text-lg font-black text-white tracking-tight leading-tight">
-                          Denden Sport+
-                        </h3>
-                        <p className="text-white/50 text-xs font-medium mt-1 line-clamp-2">
-                          Matchs en direct, calendriers et classements toute la saison.
-                        </p>
-                      </div>
+                    </div>
+                    <div className="flex flex-col text-left">
+                      <span className="hidden md:inline-block bg-gradient-to-r from-teal-600 to-emerald-500 text-white px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded mb-2">
+                        LIVE SPORTS
+                      </span>
+                      <h3 className="text-sm md:text-lg font-black text-white tracking-tight leading-tight">
+                        Denden Sport+
+                      </h3>
+                      <p className="text-white/50 text-[10px] md:text-xs font-medium mt-1 line-clamp-2 md:line-clamp-2">
+                        Matchs en direct, calendriers et classements toute la saison.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -934,7 +932,7 @@ export default function App() {
                       </h3>
                     )}
                     {filteredChannels.length > 0 ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-3 md:gap-4">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 gap-3 md:gap-4">
                         {filteredChannels.map((channel, i) => {
                           const epg = liveEpg?.[channel.id];
                           const currentProgram =

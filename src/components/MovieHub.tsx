@@ -361,8 +361,10 @@ export default function MovieHub({
   moviesList,
   onNavigate,
 }: MovieHubProps) {
-  // Denden Flix state machine - always true on mount to show splash at each entry
-  const [showSplash, setShowSplash] = useState(true);
+  // Denden Flix state machine - only show splash once per session for fluidity
+  const [showSplash, setShowSplash] = useState(() => {
+    return sessionStorage.getItem("denden_flix_splash_seen") !== "true";
+  });
   const [dbMovies, setDbMovies] = useState<Movie[]>(moviesList || []);
   const [loading, setLoading] = useState(false);
 
@@ -687,6 +689,7 @@ export default function MovieHub({
     return (
       <FlixSplash
         onFinish={() => {
+          sessionStorage.setItem("denden_flix_splash_seen", "true");
           setShowSplash(false);
         }}
       />
