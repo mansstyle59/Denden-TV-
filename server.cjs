@@ -31,20 +31,53 @@ var import_vite = require("vite");
 var import_axios = __toESM(require("axios"), 1);
 var import_zlib = __toESM(require("zlib"), 1);
 var import_xml2js = require("xml2js");
+var import_dotenv = __toESM(require("dotenv"), 1);
+var import_genai = require("@google/genai");
+import_dotenv.default.config();
 var PORT = 3e3;
 var DB_PATH = import_path.default.join(process.cwd(), "db.json");
 var EPG_CACHE_PATH = import_path.default.join(process.cwd(), "epg_cache.json");
 var INITIAL_DATA = {
   channels: [],
   categories: [
-    { id: "1", name: "G\xE9n\xE9ralistes", icon: "LayoutGrid", color: "#00A8E1", order: 0 },
-    { id: "2", name: "Cin\xE9ma & S\xE9ries", icon: "Film", color: "#8b5cf6", order: 1 },
+    {
+      id: "1",
+      name: "G\xE9n\xE9ralistes",
+      icon: "LayoutGrid",
+      color: "#00A8E1",
+      order: 0
+    },
+    {
+      id: "2",
+      name: "Cin\xE9ma & S\xE9ries",
+      icon: "Film",
+      color: "#8b5cf6",
+      order: 1
+    },
     { id: "4", name: "Information", icon: "Globe", color: "#0ea5e9", order: 2 },
-    { id: "5", name: "Documentaires", icon: "BookOpen", color: "#6366f1", order: 3 },
+    {
+      id: "5",
+      name: "Documentaires",
+      icon: "BookOpen",
+      color: "#6366f1",
+      order: 3
+    },
     { id: "6", name: "Jeunesse", icon: "Baby", color: "#f59e0b", order: 4 },
-    { id: "7", name: "Loisirs & D\xE9couverte", icon: "Compass", color: "#10b981", order: 5 },
+    {
+      id: "7",
+      name: "Loisirs & D\xE9couverte",
+      icon: "Compass",
+      color: "#10b981",
+      order: 5
+    },
     { id: "8", name: "Musique", icon: "Music", color: "#ec4899", order: 6 },
-    { id: "9", name: "International & Local", icon: "MapPin", color: "#6b7280", order: 7 }
+    {
+      id: "9",
+      name: "International & Local",
+      icon: "MapPin",
+      color: "#6b7280",
+      order: 7
+    }
   ],
   movies: [],
   settings: {
@@ -56,7 +89,13 @@ var INITIAL_DATA = {
   },
   epgCache: {},
   epgSources: [
-    { id: "1", name: "EPG Share France", url: "https://epgshare01.online/epgshare01/epg_ripper_FR1.xml.gz", isActive: true, lastSync: null }
+    {
+      id: "1",
+      name: "EPG Share France",
+      url: "https://epgshare01.online/epgshare01/epg_ripper_FR1.xml.gz",
+      isActive: true,
+      lastSync: null
+    }
   ]
 };
 function readDb() {
@@ -72,6 +111,13 @@ function readDb() {
     if (!data.movies) data.movies = [];
     if (!data.epgSources) data.epgSources = INITIAL_DATA.epgSources;
     if (!data.settings) data.settings = INITIAL_DATA.settings;
+    const originalMoviesCount = data.movies.length;
+    data.movies = data.movies.filter(
+      (m) => m && m.id && !m.id.startsWith("seed-")
+    );
+    if (data.movies.length !== originalMoviesCount) {
+      import_fs.default.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+    }
     if (data && data.channels) {
       let isAdult = function(c) {
         if (!c) return false;
@@ -155,7 +201,10 @@ async function checkStream(url) {
   try {
     const response = await import_axios.default.get(fullUrl, {
       timeout: 5e3,
-      headers: { "Range": "bytes=0-1024", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
+      headers: {
+        Range: "bytes=0-1024",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      },
       validateStatus: (status2) => status2 < 400 || status2 === 416
     });
     const responsetime = Date.now() - start;
@@ -230,7 +279,9 @@ function loadEpgCache() {
   try {
     if (import_fs.default.existsSync(EPG_CACHE_PATH)) {
       cachedProgrammes = JSON.parse(import_fs.default.readFileSync(EPG_CACHE_PATH, "utf-8"));
-      console.log(`Loaded ${cachedProgrammes.length} programs from local EPG cache.`);
+      console.log(
+        `Loaded ${cachedProgrammes.length} programs from local EPG cache.`
+      );
       reindexProgrammes();
     }
   } catch (err) {
@@ -240,7 +291,9 @@ function loadEpgCache() {
 function saveEpgCache() {
   try {
     import_fs.default.writeFileSync(EPG_CACHE_PATH, JSON.stringify(cachedProgrammes, null, 2));
-    console.log(`Saved ${cachedProgrammes.length} programs to local EPG cache.`);
+    console.log(
+      `Saved ${cachedProgrammes.length} programs to local EPG cache.`
+    );
   } catch (err) {
     console.error("Error saving EPG cache to disk:", err);
   }
@@ -258,10 +311,14 @@ function reindexProgrammes() {
     index[norm].push(prog);
   }
   for (const norm in index) {
-    index[norm].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    index[norm].sort(
+      (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+    );
   }
   indexedProgrammes = index;
-  console.log(`Re-indexed EPG database: mapped ${Object.keys(indexedProgrammes).length} channels.`);
+  console.log(
+    `Re-indexed EPG database: mapped ${Object.keys(indexedProgrammes).length} channels.`
+  );
 }
 async function syncEPG(io) {
   const db = readDb();
@@ -271,18 +328,33 @@ async function syncEPG(io) {
     if (!source.isActive) continue;
     try {
       console.log(`Fetching EPG source: ${source.name} (${source.url})`);
-      const response = await import_axios.default.get(source.url, { responseType: "arraybuffer", timeout: 25e3 });
       let xml;
-      if (source.url.endsWith(".gz")) {
-        xml = import_zlib.default.gunzipSync(response.data).toString();
+      if (source.url.startsWith("http://") || source.url.startsWith("https://")) {
+        const response = await import_axios.default.get(source.url, {
+          responseType: "arraybuffer",
+          timeout: 25e3
+        });
+        if (source.url.endsWith(".gz")) {
+          xml = import_zlib.default.gunzipSync(response.data).toString();
+        } else {
+          xml = response.data.toString();
+        }
       } else {
-        xml = response.data.toString();
+        const localPath = source.url.startsWith("/") ? import_path.default.join(process.cwd(), "public", source.url) : import_path.default.join(process.cwd(), "public", "plutotv_fr.xml");
+        console.log(`Loading local EPG from path: ${localPath}`);
+        if (!import_fs.default.existsSync(localPath)) {
+          console.warn(`Local EPG file not found at ${localPath}`);
+          continue;
+        }
+        xml = import_fs.default.readFileSync(localPath, "utf-8");
       }
       console.log(`Parsing XML elements for ${source.name}...`);
       const result = await (0, import_xml2js.parseStringPromise)(xml);
       if (result && result.tv && result.tv.programme) {
         const rawProgrammes = result.tv.programme;
-        console.log(`Discovered ${rawProgrammes.length} program attributes in ${source.name}. Processing...`);
+        console.log(
+          `Discovered ${rawProgrammes.length} program attributes in ${source.name}. Processing...`
+        );
         for (const prog of rawProgrammes) {
           const channelId = prog.$.channel;
           const startStr = prog.$.start;
@@ -320,6 +392,219 @@ async function syncEPG(io) {
   }
   writeDb(db);
   io.emit("EPG_SYNCED", { lastSync: (/* @__PURE__ */ new Date()).toISOString() });
+}
+async function syncServiceChannels(name, m3uUrl, categoryPrefix, fileName, io) {
+  console.log(`Initiating ${name} Synchronization...`);
+  try {
+    console.log(`Fetching ${name} channels from external playlist...`);
+    const response = await import_axios.default.get(m3uUrl, { timeout: 25e3 });
+    const m3uContent = response.data;
+    const m3uPath = import_path.default.join(process.cwd(), "public", `${fileName}.m3u8`);
+    import_fs.default.writeFileSync(m3uPath, m3uContent, "utf-8");
+    const lines = m3uContent.split("\n");
+    const channels = [];
+    let currentChannel = null;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line.startsWith("#EXTINF:")) {
+        const idMatch = line.match(/tvg-id="([^"]*)"/) || line.match(/id="([^"]*)"/);
+        const logoMatch = line.match(/tvg-logo="([^"]*)"/) || line.match(/logo="([^"]*)"/);
+        const groupMatch = line.match(/group-title="([^"]*)"/) || line.match(/category="([^"]*)"/);
+        const commaIdx = line.lastIndexOf(",");
+        const channelName = commaIdx !== -1 ? line.substring(commaIdx + 1).trim() : `${name} Channel`;
+        currentChannel = {
+          id: idMatch ? idMatch[1] : (Date.now() + Math.random()).toString(),
+          name: channelName,
+          logo: logoMatch ? logoMatch[1] : "https://images.unsplash.com/photo-1598257006458-087169a1f08d?auto=format&fit=crop&w=120&h=120",
+          category: groupMatch ? groupMatch[1] : name,
+          isEnabled: true
+        };
+      } else if (line && !line.startsWith("#") && currentChannel) {
+        currentChannel.url = line;
+        channels.push(currentChannel);
+        currentChannel = null;
+      }
+    }
+    console.log(`Parsed ${channels.length} ${name} channels.`);
+    const tsContent = `import { Channel } from './types';
+
+export const ${name.toUpperCase().replace(/\s/g, "_")}_CHANNELS: Channel[] = ${JSON.stringify(channels, null, 2)};
+`;
+    import_fs.default.writeFileSync(
+      import_path.default.join(process.cwd(), "src", `${fileName}Channels.ts`),
+      tsContent,
+      "utf-8"
+    );
+    const db = readDb();
+    for (const chan of channels) {
+      const categoryName = chan.category ? `${name} - ${chan.category}` : name;
+      const existing = db.channels.find(
+        (c) => c.id === chan.id || c.name.toLowerCase() === chan.name.toLowerCase() || c.url === chan.url
+      );
+      if (existing) {
+        existing.url = chan.url;
+        existing.logo = chan.logo;
+        existing.category = categoryName;
+        existing.epgId = chan.id;
+      } else {
+        db.channels.push({
+          id: chan.id,
+          name: chan.name,
+          logo: chan.logo,
+          url: chan.url,
+          category: categoryName,
+          status: "online",
+          backupUrls: [],
+          lastCheck: (/* @__PURE__ */ new Date()).toISOString(),
+          country: "France",
+          language: "Fran\xE7ais",
+          epgId: chan.id,
+          isEnabled: true
+        });
+      }
+    }
+    writeDb(db);
+    io.emit("EPG_SYNCED", { lastSync: (/* @__PURE__ */ new Date()).toISOString() });
+  } catch (err) {
+    console.error(`Sync for ${name} failed:`, err);
+  }
+}
+async function syncAllServices(io) {
+  await syncServiceChannels(
+    "T\xE9l\xE9vision Fran\xE7aise",
+    "https://iptv-org.github.io/iptv/countries/fr.m3u",
+    "TNT & Live",
+    "iptv_org_fr",
+    io
+  );
+  await syncServiceChannels(
+    "Pluto TV",
+    "https://raw.githubusercontent.com/BuddyChewChew/app-m3u-generator/main/playlists/plutotv_fr.m3u",
+    "Pluto TV",
+    "pluto",
+    io
+  );
+  await syncServiceChannels(
+    "Tubi",
+    "https://raw.githubusercontent.com/BuddyChewChew/app-m3u-generator/main/playlists/tubi_all.m3u",
+    "Tubi",
+    "tubi",
+    io
+  );
+  await syncServiceChannels(
+    "Plex",
+    "https://raw.githubusercontent.com/BuddyChewChew/app-m3u-generator/main/playlists/plex_fr.m3u",
+    "Plex",
+    "plex",
+    io
+  );
+  await syncServiceChannels(
+    "Samsung TV Plus",
+    "https://raw.githubusercontent.com/BuddyChewChew/app-m3u-generator/main/playlists/samsungtvplus_fr.m3u",
+    "Samsung",
+    "samsung",
+    io
+  );
+}
+async function syncPlutoTV(io) {
+  console.log("Initiating Pluto TV Synchronization...");
+  try {
+    console.log("Fetching Pluto TV France channels from external playlist...");
+    const m3uUrl = "https://raw.githubusercontent.com/BuddyChewChew/app-m3u-generator/main/playlists/plutotv_fr.m3u";
+    const response = await import_axios.default.get(m3uUrl, { timeout: 25e3 });
+    const m3uContent = response.data;
+    const m3uPath = import_path.default.join(process.cwd(), "public", "plutotv_fr.m3u8");
+    import_fs.default.writeFileSync(m3uPath, m3uContent, "utf-8");
+    const lines = m3uContent.split("\n");
+    const plutoChannels = [];
+    let currentChannel = null;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line.startsWith("#EXTINF:")) {
+        const idMatch = line.match(/tvg-id="([^"]*)"/) || line.match(/id="([^"]*)"/);
+        const logoMatch = line.match(/tvg-logo="([^"]*)"/) || line.match(/logo="([^"]*)"/);
+        const groupMatch = line.match(/group-title="([^"]*)"/) || line.match(/category="([^"]*)"/);
+        const commaIdx = line.lastIndexOf(",");
+        const name = commaIdx !== -1 ? line.substring(commaIdx + 1).trim() : "Pluto TV Channel";
+        currentChannel = {
+          id: idMatch ? idMatch[1] : (Date.now() + Math.random()).toString(),
+          name,
+          logo: logoMatch ? logoMatch[1] : "https://images.unsplash.com/photo-1598257006458-087169a1f08d?auto=format&fit=crop&w=120&h=120",
+          category: groupMatch ? groupMatch[1] : "Pluto TV",
+          isEnabled: true
+        };
+      } else if (line && !line.startsWith("#") && currentChannel) {
+        currentChannel.url = line;
+        plutoChannels.push(currentChannel);
+        currentChannel = null;
+      }
+    }
+    console.log(`Parsed ${plutoChannels.length} Pluto TV channels.`);
+    plutoChannels.slice(0, 5).forEach((c) => console.log(`Channel: ${c.name}, URL: ${c.url}`));
+    const tsContent = `import { Channel } from './types';
+
+export const PLUTO_CHANNELS: Channel[] = ${JSON.stringify(plutoChannels, null, 2)};
+`;
+    import_fs.default.writeFileSync(
+      import_path.default.join(process.cwd(), "src", "plutoChannels.ts"),
+      tsContent,
+      "utf-8"
+    );
+    const db = readDb();
+    let mergedCount = 0;
+    for (const plutoChan of plutoChannels) {
+      const categoryName = plutoChan.category ? `Pluto TV - ${plutoChan.category}` : "Pluto TV";
+      const existing = db.channels.find(
+        (c) => c.id === plutoChan.id || c.name.toLowerCase() === plutoChan.name.toLowerCase() || c.url === plutoChan.url
+      );
+      if (existing) {
+        existing.url = plutoChan.url;
+        existing.logo = plutoChan.logo;
+        existing.category = categoryName;
+        existing.epgId = plutoChan.id;
+      } else {
+        db.channels.push({
+          id: plutoChan.id,
+          name: plutoChan.name,
+          logo: plutoChan.logo,
+          url: plutoChan.url,
+          category: categoryName,
+          status: "online",
+          backupUrls: [],
+          lastCheck: (/* @__PURE__ */ new Date()).toISOString(),
+          country: "France",
+          language: "Fran\xE7ais",
+          epgId: plutoChan.id,
+          isEnabled: true
+        });
+        mergedCount++;
+      }
+    }
+    if (!db.epgSources) db.epgSources = [];
+    const plutoEpgId = "plutotv_fr_epg";
+    const plutoSource = db.epgSources.find((s) => s.id === plutoEpgId);
+    if (!plutoSource) {
+      db.epgSources.push({
+        id: plutoEpgId,
+        name: "Pluto TV France EPG",
+        url: "/plutotv_fr.xml",
+        isActive: true,
+        lastSync: null
+      });
+    } else {
+      plutoSource.url = "/plutotv_fr.xml";
+    }
+    writeDb(db);
+    io.emit("CHANNELS_SYNC", db.channels);
+    io.emit("EPG_SOURCES_UPDATE", db.epgSources);
+    console.log(
+      `Successfully completed Pluto TV synchronization. Merged/Updated ${plutoChannels.length} channels.`
+    );
+    return { success: true, count: plutoChannels.length, merged: mergedCount };
+  } catch (err) {
+    console.error("Pluto TV Synchronization failed:", err.message);
+    throw err;
+  }
 }
 async function fetchAndIndexIptvOrg() {
   const index = {};
@@ -370,21 +655,270 @@ async function startServer() {
   app.use(import_express.default.json({ limit: "50mb" }));
   app.use(import_express.default.urlencoded({ limit: "50mb", extended: true }));
   app.post("/api/log-error", (req, res) => {
-    console.error("CLIENT ERROR LOGGED:", req.body);
+    const errorData = req.body || {};
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+    const logPrefix = `[CLIENT_ERROR] ${timestamp}: `;
+    console.error(logPrefix, JSON.stringify(errorData, null, 2));
     res.json({ ok: true });
+  });
+  app.post("/api/sync-all", async (req, res) => {
+    try {
+      await syncAllServices(io);
+      res.json({ success: true });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Sync failed" });
+    }
+  });
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", uptime: process.uptime() });
   });
   loadEpgCache();
   setTimeout(async () => {
     const db = readDb();
     const hasSync = db.epgSources?.some((s) => s.lastSync);
     if (!hasSync || cachedProgrammes.length === 0) {
-      console.log("No EPG sync found or cache empty, performing initial sync...");
+      console.log(
+        "No EPG sync found or cache empty, performing initial sync..."
+      );
       await syncEPG(io);
     }
   }, 5e3);
   readDb();
   app.get("/api/data", (req, res) => {
     res.json(readDb());
+  });
+  let sportsEpgCache = null;
+  const SPORTS_CACHE_TTL_MS = 3e4;
+  app.get("/api/sports/epg/google", async (req, res) => {
+    const fallbackData = {
+      liveMatches: [
+        {
+          id: "fallback-live-1",
+          title: "Coupe du Monde de la FIFA 2026 - Groupe G (Match 49)",
+          sport: "football",
+          score: "0 - 0",
+          time: "Direct",
+          channel: "TF1"
+        },
+        {
+          id: "fallback-live-2",
+          title: "Tournoi d'Eastbourne (ATP 250) - Simple Messieurs",
+          sport: "tennis",
+          score: "6-4, 4-3",
+          time: "Set 2",
+          channel: "Eurosport"
+        },
+        {
+          id: "fallback-live-3",
+          title: "Coupe du Monde de la FIFA 2026 - Groupe H (Match 51)",
+          sport: "football",
+          score: "1 - 1",
+          time: "75'",
+          channel: "beIN Sports 1"
+        },
+        {
+          id: "fallback-live-4",
+          title: "Mallorca Championships (ATP 250) - 2e Tour",
+          sport: "tennis",
+          score: "7-6, 1-2",
+          time: "Set 2",
+          channel: "beIN Sports 2"
+        }
+      ],
+      epgData: [
+        {
+          id: "fallback-epg-1",
+          title: "Coupe du Monde de la FIFA 2026 - Groupe G : Match 50 (Houston)",
+          sport: "football",
+          competition: "Coupe du Monde",
+          date: "Ce soir",
+          time: "21:00",
+          channel: "M6"
+        },
+        {
+          id: "fallback-epg-2",
+          title: "Coupe du Monde de la FIFA 2026 - Groupe H : Match 52 (Monterrey)",
+          sport: "football",
+          competition: "Coupe du Monde",
+          date: "Ce soir",
+          time: "21:00",
+          channel: "beIN Sports 1"
+        },
+        {
+          id: "fallback-epg-3",
+          title: "WNBA : Las Vegas Aces vs New York Liberty",
+          sport: "basket",
+          competition: "WNBA",
+          date: "Demain",
+          time: "02:00",
+          channel: "beIN Sports 3"
+        },
+        {
+          id: "fallback-epg-4",
+          title: "Tour de France 2026 - \xC9mission sp\xE9ciale d'avant-course",
+          sport: "cycling",
+          competition: "Tour de France",
+          date: "Demain",
+          time: "13:30",
+          channel: "France 2"
+        },
+        {
+          id: "fallback-epg-5",
+          title: "Grand Prix d'Autriche F1 - \xC9mission de pr\xE9sentation",
+          sport: "f1",
+          competition: "Formule 1",
+          date: "Jeudi 25 Juin",
+          time: "18:00",
+          channel: "CANAL+"
+        }
+      ]
+    };
+    const now = Date.now();
+    if (sportsEpgCache && now - sportsEpgCache.timestamp < SPORTS_CACHE_TTL_MS) {
+      console.log(
+        `[EPG Cache] Returning cached sports EPG data (Age: ${Math.round((now - sportsEpgCache.timestamp) / 1e3)}s)`
+      );
+      return res.json({
+        ...sportsEpgCache.data,
+        source: "google",
+        isCached: true
+      });
+    }
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.log(
+        "GEMINI_API_KEY not found in environment, returning localized fallback sports data."
+      );
+      return res.json({ ...fallbackData, source: "fallback" });
+    }
+    try {
+      const ai = new import_genai.GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            "User-Agent": "aistudio-build"
+          }
+        }
+      });
+      const prompt = `Today is Tuesday, June 23, 2026. Perform a real-time Google search for today (Tuesday, June 23, 2026) and tomorrow's live and upcoming sports broadcasts on French television (such as Canal+, beIN Sports, Eurosport, L'\xC9quipe, RMC Sport, TF1, France T\xE9l\xE9visions, M6). 
+Find real live matches, tournaments, or competitions scheduled on June 23, 2026, or June 24, 2026 (e.g. World Cup 2026 matches, Tour de France 2026 preparations, Wimbledon warmup grass-court tournaments like ATP/WTA Eastbourne or Mallorca Championships).
+
+CRITICAL DIRECTIVE: Do NOT invent, reuse, or hallucinate any fictional or outdated football matches (such as Euro 2024 matches Spain vs Italy, France vs Poland, Netherlands vs Austria, or club matchups like PSG vs Marseille which do not play in June).
+Instead:
+- If you find World Cup 2026 matches today (June 23), use them. Since the specific group stage teams might not be fully drawn yet in standard search indexes, refer to them using official match designations: "Coupe du Monde 2026 - Groupe G (Match 49)", "Coupe du Monde 2026 - Groupe G (Match 50)", "Coupe du Monde 2026 - Groupe H (Match 51)", or "Coupe du Monde 2026 - Groupe H (Match 52)" on TF1, M6, or beIN Sports.
+- For tennis, search for Mallorca Championships (ATP 250) or Eastbourne International (ATP 250 / WTA 500) which are active on June 23, 2026, broadcasted on Eurosport or beIN Sports.
+- For other sports, find real-world broadcasts (e.g., WNBA on beIN Sports, or sport programs on Canal+ / L'\xC9quipe).
+
+Return a JSON object containing two lists of sports programs:
+1. "liveMatches": Array of objects that are currently live or about to play today (June 23, 2026).
+   Each object should have:
+   - "id": a unique string
+   - "title": string (e.g. "Coupe du Monde de la FIFA 2026 - Groupe G (Match 49)", "Tournoi d'Eastbourne (ATP 250)")
+   - "sport": string (one of: "football", "basket", "tennis", "rugby", "f1", "cycling", "handball")
+   - "score": string representing a realistic live score if the event is happening now, or "0 - 0" or "-" if starting soon.
+   - "time": string representing current match time (e.g., "Mi-temps", "75'", "Set 2", "Q3", or "Direct")
+   - "channel": string (the French TV channel name like "beIN Sports 1", "Canal+", "Eurosport", "TF1", "France 2")
+
+2. "epgData": Array of objects of upcoming events on June 23 or June 24.
+   Each object should have:
+   - "id": a unique string
+   - "title": string (e.g. "Coupe du Monde de la FIFA 2026 - Groupe H (Match 52)", "Tour de France 2026 - \xC9mission d'avant-course", "Grand Prix d'Autriche F1 - Pr\xE9sentation")
+   - "sport": string (one of: "football", "basket", "tennis", "rugby", "f1", "cycling", "handball")
+   - "competition": string (e.g. "F1", "Coupe du Monde", "WNBA", "Wimbledon")
+   - "date": string (e.g. "Aujourd'hui", "Demain", or "24 Juin")
+   - "time": string (e.g. "21:00", "15:30")
+   - "channel": string (the French TV channel name like "beIN Sports", "Canal+ Sport", "RMC Sport 1", "M6")
+
+You MUST retrieve actual real-world matches using Google Search grounding. Do not invent fake matchups. Return valid JSON only.`;
+      const responseSchema = {
+        type: import_genai.Type.OBJECT,
+        properties: {
+          liveMatches: {
+            type: import_genai.Type.ARRAY,
+            items: {
+              type: import_genai.Type.OBJECT,
+              properties: {
+                id: { type: import_genai.Type.STRING },
+                title: { type: import_genai.Type.STRING },
+                sport: { type: import_genai.Type.STRING },
+                score: { type: import_genai.Type.STRING },
+                time: { type: import_genai.Type.STRING },
+                channel: { type: import_genai.Type.STRING }
+              },
+              required: ["id", "title", "sport", "score", "time", "channel"]
+            }
+          },
+          epgData: {
+            type: import_genai.Type.ARRAY,
+            items: {
+              type: import_genai.Type.OBJECT,
+              properties: {
+                id: { type: import_genai.Type.STRING },
+                title: { type: import_genai.Type.STRING },
+                sport: { type: import_genai.Type.STRING },
+                competition: { type: import_genai.Type.STRING },
+                date: { type: import_genai.Type.STRING },
+                time: { type: import_genai.Type.STRING },
+                channel: { type: import_genai.Type.STRING }
+              },
+              required: [
+                "id",
+                "title",
+                "sport",
+                "competition",
+                "date",
+                "time",
+                "channel"
+              ]
+            }
+          }
+        },
+        required: ["liveMatches", "epgData"]
+      };
+      const result = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }],
+          responseMimeType: "application/json",
+          responseSchema
+        }
+      });
+      if (result && result.text) {
+        const cleanedText = result.text.trim();
+        const data = JSON.parse(cleanedText);
+        console.log(
+          "Successfully generated live sports EPG via Google Search Grounding."
+        );
+        sportsEpgCache = {
+          data,
+          timestamp: Date.now()
+        };
+        return res.json({ ...data, source: "google", isCached: false });
+      } else {
+        throw new Error("No text returned from Gemini API");
+      }
+    } catch (err) {
+      console.error(
+        "Error fetching Google Search Grounded Sports EPG, returning fallback data:",
+        err
+      );
+      if (sportsEpgCache) {
+        console.log("Serving stale cache after error...");
+        return res.json({
+          ...sportsEpgCache.data,
+          source: "google",
+          isCached: true,
+          stale: true
+        });
+      }
+      return res.json({
+        ...fallbackData,
+        source: "fallback",
+        error: String(err)
+      });
+    }
   });
   app.get("/api/movies", (req, res) => {
     const db = readDb();
@@ -400,11 +934,31 @@ async function startServer() {
     io.emit("MOVIES_UPDATED", db.movies);
     res.json(movie);
   });
+  app.post("/api/movies/batch", (req, res) => {
+    const db = readDb();
+    const newMovies = req.body;
+    if (Array.isArray(newMovies)) {
+      if (!db.movies) db.movies = [];
+      newMovies.forEach((movie) => {
+        if (!movie.id) {
+          movie.id = "imported-" + Math.random().toString(36).substr(2, 9);
+        }
+        db.movies.push(movie);
+      });
+      import_fs.default.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+      io.emit("MOVIES_UPDATED", db.movies);
+      res.json({ success: true, count: newMovies.length });
+    } else {
+      res.status(400).json({ error: "Invalid array format" });
+    }
+  });
   app.put("/api/movies/:id", (req, res) => {
     const db = readDb();
     const { id } = req.params;
     const updated = req.body;
-    db.movies = (db.movies || []).map((m) => m.id === id ? { ...m, ...updated } : m);
+    db.movies = (db.movies || []).map(
+      (m) => m.id === id ? { ...m, ...updated } : m
+    );
     import_fs.default.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
     io.emit("MOVIES_UPDATED", db.movies);
     res.json(updated);
@@ -421,17 +975,22 @@ async function startServer() {
     const db = readDb();
     const online = db.channels.filter((c) => c.status === "online").length;
     const slow = db.channels.filter((c) => c.status === "slow").length;
-    const offline = db.channels.filter((c) => c.status === "offline").length;
+    const offline = db.channels.filter(
+      (c) => c.status === "offline"
+    ).length;
     res.json({
       totalChannels: db.channels.length,
       activeChannels: online + slow,
       offlineChannels: offline,
       totalCategories: db.categories.length,
-      lastEpgSync: (db.epgSources || []).reduce((latest, s) => {
-        if (!s.lastSync) return latest;
-        if (!latest) return s.lastSync;
-        return new Date(s.lastSync) > new Date(latest) ? s.lastSync : latest;
-      }, null),
+      lastEpgSync: (db.epgSources || []).reduce(
+        (latest, s) => {
+          if (!s.lastSync) return latest;
+          if (!latest) return s.lastSync;
+          return new Date(s.lastSync) > new Date(latest) ? s.lastSync : latest;
+        },
+        null
+      ),
       healthScore: db.channels.length > 0 ? Math.round((online + slow * 0.5) / db.channels.length * 100) : 0
     });
   });
@@ -612,7 +1171,12 @@ async function startServer() {
         "Maya l'abeille quitte sa ruche natale pour explorer la prairie et faire de formidables rencontres.",
         "Les c\xE9l\xE8bres aventures de Barbie et sa bande d'amis dans un univers color\xE9 et bienveillant."
       ];
-      cats = ["Ludo-\xE9ducatif", "Pour les petits", "Dessin anim\xE9", "S\xE9rie Enfants"];
+      cats = [
+        "Ludo-\xE9ducatif",
+        "Pour les petits",
+        "Dessin anim\xE9",
+        "S\xE9rie Enfants"
+      ];
       progDuration = 20;
     } else if (normName.includes("disney")) {
       titles = [
@@ -757,7 +1321,12 @@ async function startServer() {
         "Gros plan sur les trous noirs et les myst\xE8res les plus obscurs de notre syst\xE8me galactique.",
         "Une reconstitution in\xE9dite \xE9tay\xE9e de lettres d'archives et de t\xE9moignages de v\xE9t\xE9rans de guerre."
       ];
-      cats = ["Documentaire", "Histoire", "Sciences et R\xE9v\xE9lations", "Nature & D\xE9couvertes"];
+      cats = [
+        "Documentaire",
+        "Histoire",
+        "Sciences et R\xE9v\xE9lations",
+        "Nature & D\xE9couvertes"
+      ];
       progDuration = 45;
     } else if (category.includes("Musique") || normName.includes("music") || normName.includes("m6 music") || normName.includes("nrj")) {
       titles = [
@@ -842,7 +1411,11 @@ async function startServer() {
       const norm = normalizeChannelName(channel.name);
       let progs = findCorrectEpgProgs(channel);
       if (progs.length === 0) {
-        progs = generateFallbackEpgForChannel(channel.name, channel.category || "", now);
+        progs = generateFallbackEpgForChannel(
+          channel.name,
+          channel.category || "",
+          now
+        );
       }
       let current = null;
       let next = null;
@@ -862,7 +1435,9 @@ async function startServer() {
       let ptvMatches = ptvData[norm];
       if (!ptvMatches) {
         const entries = Object.entries(ptvData);
-        const bestMatch = entries.find(([key]) => key === norm) || entries.find(([key]) => key.startsWith(norm + "series") || key.startsWith(norm + "films")) || entries.find(([key]) => key.includes(norm));
+        const bestMatch = entries.find(([key]) => key === norm) || entries.find(
+          ([key]) => key.startsWith(norm + "series") || key.startsWith(norm + "films")
+        ) || entries.find(([key]) => key.includes(norm));
         ptvMatches = bestMatch ? bestMatch[1] : null;
       }
       response[channel.id] = {
@@ -900,7 +1475,9 @@ async function startServer() {
         const unescape = (str) => {
           return str.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&apos;/g, "'");
         };
-        const articles = html.split(/<article class="tvp-tv-direct-card-item">/);
+        const articles = html.split(
+          /<article class="tvp-tv-direct-card-item">/
+        );
         articles.shift();
         for (const doc of articles) {
           try {
@@ -909,7 +1486,9 @@ async function startServer() {
             let channelName = channelMatch[1].trim();
             if (channelName === "C8") channelName = "C8";
             const normName = normalizeChannelName(channelName);
-            const titleMatch = doc.match(/<h2 class="tvp_chapitre">([^<]+)<\/h2>/);
+            const titleMatch = doc.match(
+              /<h2 class="tvp_chapitre">([^<]+)<\/h2>/
+            );
             const title = titleMatch ? unescape(titleMatch[1].trim()) : "";
             const imageMatch = doc.match(/<img([^>]*)>/g);
             let image = null;
@@ -923,7 +1502,9 @@ async function startServer() {
             }
             const progressMatch = doc.match(/<progress[^>]+value="([^"]+)"/);
             const progress = progressMatch ? parseFloat(progressMatch[1]) : 0;
-            const timeMatch = doc.match(/<time class="tvp-tv-direct-card-time-start"[^>]*>([^<]+)<\/time>/);
+            const timeMatch = doc.match(
+              /<time class="tvp-tv-direct-card-time-start"[^>]*>([^<]+)<\/time>/
+            );
             const time = timeMatch ? timeMatch[1].trim() : "";
             programs[normName] = {
               title,
@@ -938,14 +1519,74 @@ async function startServer() {
           }
         }
         try {
+          console.log(`Background scraping programme-television.org...`);
+          const ptOrgRes = await import_axios.default.get(
+            `https://www.programme-television.org/`,
+            {
+              headers: { "User-Agent": "Mozilla/5.0" },
+              timeout: 1e4
+            }
+          );
+          const ptOrgHtml = ptOrgRes.data;
+          const channelsBlocks = ptOrgHtml.split(
+            '<div class="tvgrid-channel__wrapper">'
+          );
+          channelsBlocks.shift();
+          for (let i = 0; i < channelsBlocks.length; i++) {
+            const block = channelsBlocks[i];
+            const nameMatch = block.match(
+              /<div class="channel_name">\s*<div>.*?<\/div>\s*(.*?)\s*<\/div>/
+            );
+            if (!nameMatch) continue;
+            let channelName = nameMatch[1].trim();
+            const normName = normalizeChannelName(channelName);
+            const titleMatch = block.match(
+              /<div class="tvgrid-broadcast__details-title">\s*<span>([^<]+)<\/span>/
+            );
+            const title = titleMatch ? unescape(titleMatch[1].trim()) : "";
+            const timeMatch = block.match(
+              /<div class="tvgrid-broadcast__details-time">([^<]+)<\/div>/
+            );
+            const time = timeMatch ? timeMatch[1].trim() : "";
+            const imgMatch = block.match(
+              /<img[^>]+src="(\/\/tv7j\.cdnartwhere\.eu[^"]+)"/
+            );
+            let image = imgMatch ? "https:" + imgMatch[1] : null;
+            if (title && !programs[normName]?.image) {
+              programs[normName] = {
+                ...programs[normName] || {},
+                title: title || programs[normName]?.title,
+                time: time || programs[normName]?.time,
+                progress: 50,
+                image: image || programs[normName]?.image,
+                channelName
+              };
+            }
+          }
+        } catch (ptErr) {
+          console.error(
+            "programme-television.org scraping failed:",
+            ptErr.message
+          );
+        }
+        try {
           const d = /* @__PURE__ */ new Date();
-          const beFormatter = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Paris", hour: "numeric", hour12: false });
-          let hour = parseInt(beFormatter.format(d), 10);
-          console.log(`Background scraping mon-programme-tv.be for live EPG (hour ${hour})...`);
-          const beResponse = await import_axios.default.get(`https://www.mon-programme-tv.be/mon-programme-television/aujourdhui/${hour}.html`, {
-            headers: { "User-Agent": "Mozilla/5.0" },
-            timeout: 1e4
+          const beFormatter = new Intl.DateTimeFormat("en-US", {
+            timeZone: "Europe/Paris",
+            hour: "numeric",
+            hour12: false
           });
+          let hour = parseInt(beFormatter.format(d), 10);
+          console.log(
+            `Background scraping mon-programme-tv.be for live EPG (hour ${hour})...`
+          );
+          const beResponse = await import_axios.default.get(
+            `https://www.mon-programme-tv.be/mon-programme-television/aujourdhui/${hour}.html`,
+            {
+              headers: { "User-Agent": "Mozilla/5.0" },
+              timeout: 1e4
+            }
+          );
           const beHtml = beResponse.data;
           const channels = beHtml.split('<div class="grille-channel">');
           channels.shift();
@@ -980,11 +1621,16 @@ async function startServer() {
           console.error("mon-programme-tv.be scraping failed:", beErr.message);
         }
         programmeTvCache = { data: programs, timestamp: Date.now() };
-        console.log(`Background scrape completed. Cache updated with ${Object.keys(programs).length} channels.`);
+        console.log(
+          `Background scrape completed. Cache updated with ${Object.keys(programs).length} channels.`
+        );
         const liveEpgData = await getLiveEpgData();
         io.emit("EPG_LIVE_UPDATE", liveEpgData);
       } catch (err) {
-        console.error("Background scrape of programme-tv.net failed:", err.message);
+        console.error(
+          "Background scrape of programme-tv.net failed:",
+          err.message
+        );
       } finally {
         isScrapingProgrammeTv = false;
       }
@@ -1074,7 +1720,9 @@ async function startServer() {
       const db = readDb();
       let importedCount = 0;
       for (const parsed of parsedChannels) {
-        const duplicate = db.channels.find((c) => c.name.toLowerCase() === parsed.name.toLowerCase());
+        const duplicate = db.channels.find(
+          (c) => c.name.toLowerCase() === parsed.name.toLowerCase()
+        );
         if (duplicate) {
           if (duplicate.url !== parsed.url) {
             if (!duplicate.backupUrls) duplicate.backupUrls = [];
@@ -1106,7 +1754,9 @@ async function startServer() {
       res.json({ count: importedCount, total: db.channels.length });
     } catch (err) {
       console.error("Import preset failure:", err.message);
-      res.status(500).json({ error: "Failed to parse or download the remote IPTV catalog." });
+      res.status(500).json({
+        error: "Failed to parse or download the remote IPTV catalog."
+      });
     }
   });
   app.post("/api/playlists/parse", async (req, res) => {
@@ -1162,11 +1812,19 @@ async function startServer() {
   app.post("/api/channels/repair", async (req, res) => {
     const db = readDb();
     let repairedCount = 0;
-    const offlineChannels = db.channels.filter((c) => c.status === "offline" || !c.status);
+    const offlineChannels = db.channels.filter(
+      (c) => c.status === "offline" || !c.status
+    );
     if (offlineChannels.length === 0) {
-      return res.json({ repairedCount: 0, totalChecked: 0, message: "Tous les flux sont OK" });
+      return res.json({
+        repairedCount: 0,
+        totalChecked: 0,
+        message: "Tous les flux sont OK"
+      });
     }
-    console.log(`Self-Healing AutoRepair: Processing ${offlineChannels.length} streams...`);
+    console.log(
+      `Self-Healing AutoRepair: Processing ${offlineChannels.length} streams...`
+    );
     const iptvOrgIndex = await fetchAndIndexIptvOrg();
     for (const channel of offlineChannels) {
       const norm = normalizeChannelName(channel.name);
@@ -1174,10 +1832,14 @@ async function startServer() {
       let foundAlternative = false;
       for (const candidateUrl of candidates) {
         if (candidateUrl === channel.url) continue;
-        console.log(`AutoRepair: verifying stream viability limit of ${channel.name} \u2794 ${candidateUrl}`);
+        console.log(
+          `AutoRepair: verifying stream viability limit of ${channel.name} \u2794 ${candidateUrl}`
+        );
         const stats = await checkStream(candidateUrl);
         if (stats.status === "online" || stats.status === "slow") {
-          console.log(`AutoRepair Success: ${channel.name} solved with ${candidateUrl}`);
+          console.log(
+            `AutoRepair Success: ${channel.name} solved with ${candidateUrl}`
+          );
           if (!channel.backupUrls) channel.backupUrls = [];
           if (!channel.backupUrls.includes(channel.url)) {
             channel.backupUrls.push(channel.url);
@@ -1196,8 +1858,10 @@ async function startServer() {
       }
       if (!foundAlternative) {
         let fallbackUrl = "";
-        if (norm === "france2") fallbackUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
-        else if (norm === "tf1") fallbackUrl = "https://playertest.longtailvideo.com/adaptive/bipbop/bipbop.m3u8";
+        if (norm === "france2")
+          fallbackUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
+        else if (norm === "tf1")
+          fallbackUrl = "https://playertest.longtailvideo.com/adaptive/bipbop/bipbop.m3u8";
         if (fallbackUrl) {
           const stats = await checkStream(fallbackUrl);
           channel.url = fallbackUrl;
@@ -1215,8 +1879,21 @@ async function startServer() {
     res.json({ repairedCount, totalChecked: offlineChannels.length });
   });
   app.post("/api/epg/sync", async (req, res) => {
+    try {
+      await syncPlutoTV(io);
+    } catch (err) {
+      console.error("Pluto TV sync failed inside EPG sync:", err.message);
+    }
     await syncEPG(io);
     res.json({ status: "ok" });
+  });
+  app.post("/api/pluto/sync", async (req, res) => {
+    try {
+      const result = await syncPlutoTV(io);
+      res.json({ status: "ok", ...result });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
   });
   app.post("/api/channels", (req, res) => {
     const db = readDb();
@@ -1251,12 +1928,15 @@ async function startServer() {
     const { ids, targetName } = req.body;
     const db = readDb();
     const toMerge = db.channels.filter((c) => ids.includes(c.id));
-    if (toMerge.length < 2) return res.status(400).send("At least 2 channels required");
+    if (toMerge.length < 2)
+      return res.status(400).send("At least 2 channels required");
     const primary = toMerge[0];
     const secondaryUrls = toMerge.slice(1).map((c) => c.url);
     primary.name = targetName || primary.name;
     if (!primary.backupUrls) primary.backupUrls = [];
-    primary.backupUrls = [.../* @__PURE__ */ new Set([...primary.backupUrls, ...secondaryUrls])];
+    primary.backupUrls = [
+      .../* @__PURE__ */ new Set([...primary.backupUrls, ...secondaryUrls])
+    ];
     db.channels = db.channels.filter((c) => !ids.slice(1).includes(c.id));
     writeDb(db);
     io.emit("CHANNELS_SYNC", db.channels);
@@ -1371,7 +2051,9 @@ async function startServer() {
       const cat = (c.category || "").toLowerCase();
       const country = (c.country || "").toLowerCase();
       const lang = (c.language || "").toLowerCase();
-      if (coreFrenchKeywords.some((kw) => name === kw || name.startsWith(kw + " ") || name.includes(" " + kw) || name.includes(kw))) {
+      if (coreFrenchKeywords.some(
+        (kw) => name === kw || name.startsWith(kw + " ") || name.includes(" " + kw) || name.includes(kw)
+      )) {
         return true;
       }
       if (name.includes("(fr)") || name.includes("[fr]") || name.includes("fr:") || name.includes("fr|") || name.includes("fr-") || name.includes("french") || name.includes("belge") || name.includes("suisse") || name.startsWith("fr ")) {
@@ -1405,7 +2087,10 @@ async function startServer() {
     });
     writeDb(db);
     io.emit("CHANNELS_SYNC", db.channels);
-    res.json({ kept: db.channels.length, deleted: countBefore - db.channels.length });
+    res.json({
+      kept: db.channels.length,
+      deleted: countBefore - db.channels.length
+    });
   });
   app.post("/api/channels/auto-merge-duplicates", (req, res) => {
     const db = readDb();
@@ -1492,11 +2177,15 @@ async function startServer() {
     db.channels = mergedChannels;
     writeDb(db);
     io.emit("CHANNELS_SYNC", db.channels);
-    res.json({ kept: db.channels.length, merged: countBefore - db.channels.length });
+    res.json({
+      kept: db.channels.length,
+      merged: countBefore - db.channels.length
+    });
   });
   app.post("/api/channels/bulk-delete", (req, res) => {
     const { ids } = req.body;
-    if (!Array.isArray(ids)) return res.status(400).json({ error: "ids must be an array" });
+    if (!Array.isArray(ids))
+      return res.status(400).json({ error: "ids must be an array" });
     const db = readDb();
     db.channels = db.channels.filter((c) => !ids.includes(c.id));
     writeDb(db);
@@ -1578,7 +2267,8 @@ async function startServer() {
   });
   app.post("/api/epg/sources/toggle", (req, res) => {
     const db = readDb();
-    if (!db.epgSources || !db.epgSources[req.body.index]) return res.status(404).send("Not found");
+    if (!db.epgSources || !db.epgSources[req.body.index])
+      return res.status(404).send("Not found");
     db.epgSources[req.body.index].isActive = !db.epgSources[req.body.index].isActive;
     writeDb(db);
     res.json(db.epgSources[req.body.index]);
@@ -1586,12 +2276,15 @@ async function startServer() {
   app.get("/api/proxy/cartelive", async (req, res) => {
     try {
       const feed = req.query.feed || "ufeed01";
-      const hocaRes = await import_axios.default.get(`https://hoca8.com/footy.php?player=desktop&live=${feed}`, {
-        headers: {
-          "Referer": "https://cartelive.club/",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      const hocaRes = await import_axios.default.get(
+        `https://hoca8.com/footy.php?player=desktop&live=${feed}`,
+        {
+          headers: {
+            Referer: "https://cartelive.club/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          }
         }
-      });
+      );
       const data = hocaRes.data;
       let resultUrl = "";
       const arrMatch = data.match(/\["h","t","t","p","s",":"[^\]]+\]/);
@@ -1599,10 +2292,14 @@ async function startServer() {
         const arr = JSON.parse(arrMatch[0]);
         resultUrl = arr.join("");
       }
-      const extraArrayMatch = data.match(/join\(""\)\s*\+\s*([a-zA-Z0-9]+)\.join\(""\)/);
+      const extraArrayMatch = data.match(
+        /join\(""\)\s*\+\s*([a-zA-Z0-9]+)\.join\(""\)/
+      );
       if (extraArrayMatch) {
         const varName = extraArrayMatch[1];
-        const varMatch = data.match(new RegExp(`var\\s+${varName}\\s*=\\s*(\\[[^\\]]*\\])`));
+        const varMatch = data.match(
+          new RegExp(`var\\s+${varName}\\s*=\\s*(\\[[^\\]]*\\])`)
+        );
         if (varMatch) {
           try {
             const extraArr = JSON.parse(varMatch[1].replace(/'/g, '"'));
@@ -1611,16 +2308,22 @@ async function startServer() {
           }
         }
       }
-      const spanMatch = data.match(/document\.getElementById\("([^"]+)"\)\.innerHTML/);
+      const spanMatch = data.match(
+        /document\.getElementById\("([^"]+)"\)\.innerHTML/
+      );
       if (spanMatch) {
         const spanId = spanMatch[1];
-        const spanContentMatch = data.match(new RegExp(`id=${spanId}>([^<]*)<`));
+        const spanContentMatch = data.match(
+          new RegExp(`id=${spanId}>([^<]*)<`)
+        );
         if (spanContentMatch) {
           resultUrl += spanContentMatch[1];
         }
       }
       if (resultUrl) {
-        res.redirect(`/api/proxy/stream?url=${encodeURIComponent(resultUrl)}&referer=${encodeURIComponent("https://hoca8.com/")}`);
+        res.redirect(
+          `/api/proxy/stream?url=${encodeURIComponent(resultUrl)}&referer=${encodeURIComponent("https://hoca8.com/")}`
+        );
       } else {
         res.status(404).send("Stream not found or parse failed");
       }
@@ -1632,15 +2335,18 @@ async function startServer() {
     const url = req.query.url;
     const referer = req.query.referer || "https://hoca8.com/";
     if (!url) return res.status(400).send("No url provided");
+    console.log(`[Proxy] Fetching: ${url} with Referer: ${referer}`);
     try {
       const isM3u8 = url.toLowerCase().includes(".m3u8") || url.toLowerCase().includes("m3u8");
       const resp = await import_axios.default.get(url, {
         headers: {
-          "Referer": referer,
+          Referer: referer,
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         },
         responseType: isM3u8 ? "text" : "stream",
-        validateStatus: () => true
+        validateStatus: () => true,
+        timeout: 15e3
+        // 15 seconds timeout
       });
       res.status(resp.status);
       res.set("Access-Control-Allow-Origin", "*");
@@ -1680,10 +2386,14 @@ async function startServer() {
         resp.data.pipe(res);
       }
     } catch (err) {
-      console.log("[Stream Routing] Source unreachable, trying fallback option");
+      console.log(
+        "[Stream Routing] Source unreachable, trying fallback option"
+      );
       const isM6Url = url && (url.includes("shls-m6-france") || url.includes("origin2-6play") || url.includes("shls-m6-int"));
       if (isM6Url) {
-        console.log("[Stream Routing] Redirecting M6 stream to live backup source (fixing M6 Kids error)");
+        console.log(
+          "[Stream Routing] Redirecting M6 stream to live backup source (fixing M6 Kids error)"
+        );
         try {
           return res.redirect("/api/proxy/fstv?newsid=14");
         } catch (fallbackErr) {
@@ -1726,7 +2436,9 @@ async function startServer() {
       res.set("Access-Control-Allow-Origin", "*");
       res.set("Access-Control-Allow-Headers", "*");
       if (response.status >= 400) {
-        console.warn(`Video Proxy Warning: ${videoUrl} returned status ${response.status}`);
+        console.warn(
+          `Video Proxy Warning: ${videoUrl} returned status ${response.status}`
+        );
       }
       const forwardHeaders = [
         "content-type",
@@ -1753,18 +2465,27 @@ async function startServer() {
     const newsid = req.query.newsid;
     if (!newsid) return res.status(400).send("Missing newsid");
     try {
-      const pageRes = await import_axios.default.get(`https://fstv.rest/index.php?newsid=${newsid}`);
-      const paths = [...pageRes.data.matchAll(/window\.FSTV_SRC\s*=\s*"([^"]+)"/g)];
+      const pageRes = await import_axios.default.get(
+        `https://fstv.rest/index.php?newsid=${newsid}`
+      );
+      const paths = [
+        ...pageRes.data.matchAll(/window\.FSTV_SRC\s*=\s*"([^"]+)"/g)
+      ];
       let path2 = paths.find((p) => p[1].length > 0)?.[1];
       if (!path2) {
         return res.status(404).send("Stream not found or FSTV_SRC matching failed");
       }
       if (path2.includes("ch=")) {
-        const nameMatch = pageRes.data.match(/window\.FSTV_NAME\s*=\s*"([^"]+)"/);
+        const nameMatch = pageRes.data.match(
+          /window\.FSTV_NAME\s*=\s*"([^"]+)"/
+        );
         if (nameMatch && nameMatch[1]) {
-          const sourcesRes = await import_axios.default.get(`https://fstv.rest/live.php?q=1&sources=${encodeURIComponent(nameMatch[1])}`, {
-            headers: { "Referer": "https://fstv.rest/" }
-          });
+          const sourcesRes = await import_axios.default.get(
+            `https://fstv.rest/live.php?q=1&sources=${encodeURIComponent(nameMatch[1])}`,
+            {
+              headers: { Referer: "https://fstv.rest/" }
+            }
+          );
           if (sourcesRes.data && sourcesRes.data.length > 0) {
             const bestSource = sourcesRes.data.find((s) => s.q === "FHD" || s.q === "HD") || sourcesRes.data[0];
             path2 = `/live.php?id=${bestSource.id}`;
@@ -1772,9 +2493,12 @@ async function startServer() {
         }
       }
       const m3u8Res = await import_axios.default.get(`https://fstv.rest${path2}`, {
-        headers: { "Referer": `https://fstv.rest/index.php?newsid=${newsid}` }
+        headers: { Referer: `https://fstv.rest/index.php?newsid=${newsid}` }
       });
-      const modifiedM3u8 = m3u8Res.data.replace(/https:\/\/fstv\.rest\/live\.php\?seg=/g, "/api/proxy/fstv/seg?url=");
+      const modifiedM3u8 = m3u8Res.data.replace(
+        /https:\/\/fstv\.rest\/live\.php\?seg=/g,
+        "/api/proxy/fstv/seg?url="
+      );
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Headers", "*");
       res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
@@ -1787,18 +2511,25 @@ async function startServer() {
   app.get("/api/proxy/fstv/seg", async (req, res) => {
     const segUrl = req.query.url;
     try {
-      const response = await import_axios.default.get(`https://fstv.rest/live.php?seg=${encodeURIComponent(segUrl)}`, {
-        responseType: "stream",
-        headers: { "Referer": "https://fstv.rest/" }
-      });
+      const response = await import_axios.default.get(
+        `https://fstv.rest/live.php?seg=${encodeURIComponent(segUrl)}`,
+        {
+          responseType: "stream",
+          headers: { Referer: "https://fstv.rest/" }
+        }
+      );
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Headers", "*");
       if (response.headers["content-type"]) {
-        res.setHeader("Content-Type", response.headers["content-type"]);
+        res.setHeader(
+          "Content-Type",
+          response.headers["content-type"]
+        );
       }
       response.data.pipe(res);
     } catch (err) {
-      if (!res.headersSent) res.status(500).send("Segment routing request did not complete");
+      if (!res.headersSent)
+        res.status(500).send("Segment routing request did not complete");
     }
   });
   app.post("/api/channels/scrape-fstv", async (req, res) => {
@@ -1806,13 +2537,17 @@ async function startServer() {
     if (!url) return res.status(400).json({ error: "URL is required" });
     try {
       const newsidMatch = url.match(/newsid=(\d+)/);
-      if (!newsidMatch) return res.status(400).json({ error: "Invalid FSTV URL (missing newsid)" });
+      if (!newsidMatch)
+        return res.status(400).json({ error: "Invalid FSTV URL (missing newsid)" });
       const newsid = newsidMatch[1];
-      const pageRes = await import_axios.default.get(`https://fstv.rest/index.php?newsid=${newsid}`, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      const pageRes = await import_axios.default.get(
+        `https://fstv.rest/index.php?newsid=${newsid}`,
+        {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          }
         }
-      });
+      );
       const html = pageRes.data;
       const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
       let name = titleMatch ? titleMatch[1].split("regarder")[0].split("-")[0].trim() : `FSTV Channel ${newsid}`;
@@ -1841,7 +2576,11 @@ async function startServer() {
         io.emit("CHANNEL_ADDED", channelData);
         res.json({ success: true, channel: channelData });
       } else {
-        res.json({ success: true, channel: existing, message: "Channel already exists" });
+        res.json({
+          success: true,
+          channel: existing,
+          message: "Channel already exists"
+        });
       }
     } catch (err) {
       console.error("FSTV Scraping error:", err.message);
@@ -1863,18 +2602,25 @@ async function startServer() {
         return res.status(404).send("wiTV Player ID not found");
       }
       const playerId = match[1];
-      const playerRes = await import_axios.default.get(`https://witv.team/player/playerjs/witv-player.php?id=${playerId}`, {
-        headers: {
-          "Referer": channelUrl,
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      const playerRes = await import_axios.default.get(
+        `https://witv.team/player/playerjs/witv-player.php?id=${playerId}`,
+        {
+          headers: {
+            Referer: channelUrl,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          }
         }
-      });
-      const streamMatch = playerRes.data.match(/var streamUrl = "(https:\/\/[^"]+)"/);
+      );
+      const streamMatch = playerRes.data.match(
+        /var streamUrl = "(https:\/\/[^"]+)"/
+      );
       if (!streamMatch) {
         return res.status(404).send("wiTV stream URL not found");
       }
       const rawStreamUrl = streamMatch[1];
-      res.redirect(`/api/proxy/stream?url=${encodeURIComponent(rawStreamUrl)}&referer=${encodeURIComponent("https://witv.team/")}`);
+      res.redirect(
+        `/api/proxy/stream?url=${encodeURIComponent(rawStreamUrl)}&referer=${encodeURIComponent("https://witv.team/")}`
+      );
     } catch (err) {
       console.warn("[wiTV Routing Warning]", err.message);
       res.status(500).send(err.message);
@@ -1899,7 +2645,9 @@ async function startServer() {
       if (!bestStream.url) {
         return res.status(404).send("Stream URL not found");
       }
-      res.redirect(`/api/proxy/stream?url=${encodeURIComponent(bestStream.url)}&referer=${encodeURIComponent("https://tvmio.ooguy.com/")}`);
+      res.redirect(
+        `/api/proxy/stream?url=${encodeURIComponent(bestStream.url)}&referer=${encodeURIComponent("https://tvmio.ooguy.com/")}`
+      );
     } catch (err) {
       console.error("[TVMio Proxy Error]", err.message);
       res.status(500).send("TVMio proxy internal error");
@@ -1934,19 +2682,28 @@ async function startServer() {
       firstAppStart: now,
       lastAppStart: now,
       adblockEnabled: true,
-      proxy: { supported: ["ss"], engine: "Mu", enabled: false, autoServer: true },
+      proxy: {
+        supported: ["ss"],
+        engine: "Mu",
+        enabled: false,
+        autoServer: true
+      },
       iap: { supported: false }
     };
     console.log("[VAVOO SERVICE] Fetching fresh VAVOO signature...");
     try {
-      const response = await import_axios.default.post("https://www.vavoo.tv/api/app/ping", payload, {
-        headers: {
-          "Content-Type": "application/json",
-          "User-Agent": "vavoo/3.1.8"
-        },
-        timeout: 1e4,
-        validateStatus: (status) => status === 200
-      });
+      const response = await import_axios.default.post(
+        "https://www.vavoo.tv/api/app/ping",
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "vavoo/3.1.8"
+          },
+          timeout: 1e4,
+          validateStatus: (status) => status === 200
+        }
+      );
       const signature = response.data?.addonSig;
       if (!signature) {
         throw new Error("VAVOO ping reply did not contain addonSig");
@@ -1958,13 +2715,17 @@ async function startServer() {
     } catch (err) {
       console.warn("[VAVOO SERVICE] Primary endpoint failed, trying backup...");
       try {
-        const response = await import_axios.default.post("https://www.vavoo.to/api/app/ping", payload, {
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": "vavoo/3.1.8"
-          },
-          timeout: 1e4
-        });
+        const response = await import_axios.default.post(
+          "https://www.vavoo.to/api/app/ping",
+          payload,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              "User-Agent": "vavoo/3.1.8"
+            },
+            timeout: 1e4
+          }
+        );
         const signature = response.data?.addonSig;
         if (signature) {
           cachedVavooSignature = signature;
@@ -1974,7 +2735,9 @@ async function startServer() {
       } catch (e) {
       }
       if (cachedVavooSignature) {
-        console.warn("[VAVOO SERVICE] All endpoints failed, using stale cached signature as last resort");
+        console.warn(
+          "[VAVOO SERVICE] All endpoints failed, using stale cached signature as last resort"
+        );
         return cachedVavooSignature;
       }
       throw err;
@@ -1999,21 +2762,23 @@ async function startServer() {
             "content-type": "application/json; charset=utf-8",
             "mediahubmx-signature": signature,
             "user-agent": "MediaHubMX/2",
-            "accept": "*/*",
+            accept: "*/*",
             "Accept-Language": "fr-FR,fr;q=0.9",
-            "Connection": "close"
+            Connection: "close"
           },
           timeout: 12e3
         });
       } catch (retryErr) {
-        console.warn("[VAVOO PROXY] Resolve failed (FR), retrying with DE region...");
+        console.warn(
+          "[VAVOO PROXY] Resolve failed (FR), retrying with DE region..."
+        );
         resolvePayload.region = "DE";
         resolveRes = await import_axios.default.post(resolveUrl, resolvePayload, {
           headers: {
             "content-type": "application/json; charset=utf-8",
             "mediahubmx-signature": signature,
             "user-agent": "MediaHubMX/2",
-            "Connection": "close"
+            Connection: "close"
           },
           timeout: 12e3
         });
@@ -2026,10 +2791,16 @@ async function startServer() {
         streamUrl = resolvedData.url || resolvedData.streamUrl || "";
       }
       if (streamUrl) {
-        console.log(`[VAVOO PROXY] Stream successfully resolved: ${streamUrl.substring(0, 40)}...`);
-        return res.redirect(`/api/proxy/stream?url=${encodeURIComponent(streamUrl)}&referer=${encodeURIComponent("https://vavoo.to/")}`);
+        console.log(
+          `[VAVOO PROXY] Stream successfully resolved: ${streamUrl.substring(0, 40)}...`
+        );
+        return res.redirect(
+          `/api/proxy/stream?url=${encodeURIComponent(streamUrl)}&referer=${encodeURIComponent("https://vavoo.to/")}`
+        );
       } else {
-        console.warn("[VAVOO PROXY] Resolve succeeded but no URL found in response");
+        console.warn(
+          "[VAVOO PROXY] Resolve succeeded but no URL found in response"
+        );
         return res.status(404).send("VAVOO resolve failed to extract stream URL.");
       }
     } catch (err) {
@@ -2078,7 +2849,11 @@ async function startServer() {
         writeDb(db);
         io.emit("CHANNELS_SYNC", db.channels);
       }
-      res.json({ success: true, count: importedCount, totalInCatalog: metas.length });
+      res.json({
+        success: true,
+        count: importedCount,
+        totalInCatalog: metas.length
+      });
     } catch (err) {
       console.error("[TVMio Import Error]", err.message);
       res.status(500).json({ error: "Failed to import TVMio channels" });
@@ -2089,7 +2864,8 @@ async function startServer() {
     if (!url) return res.status(400).json({ error: "URL is required" });
     try {
       const matchSlug = url.match(/chaines-live\/([^/]+)$/);
-      if (!matchSlug) return res.status(400).json({ error: "Invalid wiTV URL structure" });
+      if (!matchSlug)
+        return res.status(400).json({ error: "Invalid wiTV URL structure" });
       const slug = matchSlug[1];
       const pageRes = await import_axios.default.get(url, {
         headers: {
@@ -2128,7 +2904,11 @@ async function startServer() {
         io.emit("CHANNEL_ADDED", channelData);
         res.json({ success: true, channel: channelData });
       } else {
-        res.json({ success: true, channel: existing, message: "Channel already exists" });
+        res.json({
+          success: true,
+          channel: existing,
+          message: "Channel already exists"
+        });
       }
     } catch (err) {
       console.error("wiTV Scraping error:", err.message);
@@ -2168,18 +2948,42 @@ async function startServer() {
       console.log("User disconnected");
     });
   });
-  setInterval(() => syncEPG(io), 6 * 60 * 60 * 1e3);
+  setInterval(
+    async () => {
+      try {
+        await syncAllServices(io);
+      } catch (err) {
+        console.error("Interval sync failed:", err.message);
+      }
+      await syncEPG(io);
+    },
+    6 * 60 * 60 * 1e3
+  );
+  (async () => {
+    try {
+      console.log("Running startup sync for all services and EPG...");
+      await syncAllServices(io);
+      await syncEPG(io);
+    } catch (err) {
+      console.error("Startup sync failed:", err.message);
+    }
+  })();
   setInterval(async () => {
     const data = await getLiveEpgData();
     io.emit("EPG_LIVE_UPDATE", data);
   }, 10 * 1e3);
-  setInterval(async () => {
-    console.log("Executing Background Auto-Healing sweep (including Private Zone cleanup)...");
-    import_axios.default.post(`http://localhost:${PORT}/api/channels/repair`).catch(() => {
-    });
-    import_axios.default.post(`http://localhost:${PORT}/api/channels/repair`).catch(() => {
-    });
-  }, 1 * 60 * 60 * 1e3);
+  setInterval(
+    async () => {
+      console.log(
+        "Executing Background Auto-Healing sweep (including Private Zone cleanup)..."
+      );
+      import_axios.default.post(`http://localhost:${PORT}/api/channels/repair`).catch(() => {
+      });
+      import_axios.default.post(`http://localhost:${PORT}/api/channels/repair`).catch(() => {
+      });
+    },
+    1 * 60 * 60 * 1e3
+  );
 }
 process.on("uncaughtException", (err) => {
   console.error("CRITICAL UNCAUGHT EXCEPTION:", err);

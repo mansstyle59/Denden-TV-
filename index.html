@@ -42,40 +42,102 @@
         outline: none;
       }
     </style>
-    <script type="module" crossorigin src="/assets/index-CG0OK8Of.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-ZMQ7cZQM.css">
+    <script type="module" crossorigin src="/assets/index-Bn3DHd3V.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-D5K5vIsq.css">
   </head>
   <body class="bg-black select-none">
     <div id="root"></div>
     <script>
+      // 1. Establish window.onerror handler to suppress browser/cross-origin/extension error reports
+      window.onerror = function(message, source, lineno, colno, error) {
+        var msg = message || '';
+        var filename = source || '';
+        var msgLower = msg.toLowerCase();
+        
+        // Suppress any generic Script errors, blank errors, extensions, or external hosts
+        if (msgLower.indexOf('script error') !== -1 || !msg) {
+          return true; // entirely handled, halts propagation
+        }
+        if (filename.indexOf('chrome-extension') !== -1 || filename.indexOf('moz-extension') !== -1 || filename.indexOf('safari-') !== -1 || filename.indexOf('extensions') !== -1) {
+          return true;
+        }
+        if (!filename || filename === 'unknown') {
+          return true;
+        }
+        if (filename.indexOf('http') === 0 && filename.indexOf(window.location.host) === -1) {
+          return true;
+        }
+        
+        // Log genuine errors if any through our endpoint
+        var errorData = {
+          message: msg,
+          source: filename,
+          lineno: lineno || 0,
+          colno: colno || 0,
+          error: error ? (error.stack || error.toString()) : null,
+          type: 'window.onerror'
+        };
+        console.error("Captured Window Error:", errorData);
+        fetch('/api/log-error', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(errorData)
+        }).catch(function() {});
+        
+        return false; // let the default handler run if it wasn't filtered
+      };
+
+      // 2. Establish addEventListener('error') to double-ensure we call e.preventDefault(),
+      // e.stopPropagation(), and e.stopImmediatePropagation()
       window.addEventListener('error', function(e) {
-        fetch('/api/log-error', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: e.message, source: e.filename, lineno: e.lineno, colno: e.colno, error: e.error ? e.error.stack : null })
-        });
-      });
+        var msg = e.message || '';
+        var filename = e.filename || '';
+        var msgLower = msg.toLowerCase();
+        
+        if (msgLower.indexOf('script error') !== -1 || !msg ||
+            filename.indexOf('chrome-extension') !== -1 || filename.indexOf('moz-extension') !== -1 || filename.indexOf('safari-') !== -1 || filename.indexOf('extensions') !== -1 ||
+            (!filename || filename === 'unknown') ||
+            (filename.indexOf('http') === 0 && filename.indexOf(window.location.host) === -1)) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          return;
+        }
+      }, true); // use capture phase so we capture it before anything else and can silence it
+
+      // 3. Establish unhandledrejection event listener to catch and suppress promise rejections
       window.addEventListener('unhandledrejection', function(e) {
+        var reason = e.reason || {};
+        var msg = reason.message || reason.toString() || '';
+        var msgLower = msg.toLowerCase();
+        
+        if (msgLower.indexOf('websocket') !== -1 || msgLower.indexOf('script error') !== -1 || msgLower.indexOf('resizeobserver') !== -1 || !msg) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          return;
+        }
+
+        var stack = reason.stack || '';
+        if (stack.indexOf('chrome-extension') !== -1 || stack.indexOf('moz-extension') !== -1) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          return;
+        }
+
+        var errorData = {
+          message: msg,
+          stack: stack || null,
+          type: 'unhandledrejection'
+        };
+        console.error("Unhandled Rejection Captured:", errorData);
         fetch('/api/log-error', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: e.reason ? (e.reason.message || e.reason) : 'Unhandled Rejection', stack: e.reason ? e.reason.stack : null })
-        });
+          body: JSON.stringify(errorData)
+        }).catch(function() {});
       });
-    </script>
-    <script>
-      // Register the no-op sw.js to clear out any old caching PWA behavior
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then((registration) => {
-            // Only update if it's not a fresh install, but honestly register() handles it.
-            // We'll just log success or do nothing to stay safe.
-            console.log('ServiceWorker registered');
-          }).catch((error) => {
-            console.warn('ServiceWorker registration failed:', error);
-          });
-        });
-      }
     </script>
   </body>
 </html>
